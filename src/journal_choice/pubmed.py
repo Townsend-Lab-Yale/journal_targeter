@@ -5,7 +5,6 @@ PUBMED journal list at ftp://ftp.ncbi.nih.gov/pubmed/J_Medline.txt
 
 import os
 import time
-import json
 import pickle
 import shlex
 import shutil
@@ -24,6 +23,7 @@ from dotenv import load_dotenv, find_dotenv
 from . import DATA_DIR
 from .helpers import get_issn_safe, get_issn1, get_issn_comb, \
     get_clean_lowercase, grouper
+from .mapping import load_scopus_map
 
 
 JOURNALS_PATH = os.path.join(DATA_DIR, 'J_Medline.txt')
@@ -34,7 +34,6 @@ _logger = logging.getLogger(__name__)
 load_dotenv(find_dotenv())  # for NCBI API KEY
 ESUMMARY_PATH = os.environ.get('ESUMMARY_PATH')
 UID_DICT_PATH = os.path.join(DATA_DIR, 'uid_dict.pickle')
-SCOPUS_MATCH_JSON = os.path.join(DATA_DIR, 'scopus_match.json')
 
 
 class HTTPError414(Exception):
@@ -205,15 +204,10 @@ def load_pubmed_journals(refresh=False):
     pm['is_unique_title_safe'] = ~pm['title_safe'].isin(dup_titles_safe)
 
     # ADD SCOPUS ID
+    scopus_id_dict = load_scopus_map()
     pm['scopus_id'] = pd.Series(pm.index, index=pm.index).map(scopus_id_dict)\
         .fillna(-1).astype(int)
     return pm
-
-
-def load_scopus_map():
-    with open(SCOPUS_MATCH_JSON) as infile:
-        scopus_id_dict = json.load(infile)
-    return scopus_id_dict
 
 
 def refresh_pubmed_reference():

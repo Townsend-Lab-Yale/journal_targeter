@@ -1,12 +1,14 @@
-""""https://www.scopus.com/sources"""
-
+""""Scopus Sources table via https://www.scopus.com/sources"""
+import os
 import numpy as np
 import pandas as pd
 
+from . import DATA_DIR
 from .helpers import get_issn_safe, get_issn1, get_issn_comb, get_clean_lowercase
 
 
-CITESCORE_YEAR = '2018'
+SCOPUS_PATH = os.path.join(DATA_DIR, 'scopus', 'ext_list_october_2019.xlsx')
+CITESCORE_YEAR = '2018'  # @TODO: Identify latest year in sources xlsx file
 
 _COL_RENAME_DICT = {
     'Sourcerecord id': 'scopus_id',
@@ -22,7 +24,7 @@ _COL_RENAME_DICT = {
 }
 
 
-def load_scopus_journals_full(scopus_xlsx_path):
+def load_scopus_journals_full(scopus_xlsx_path=SCOPUS_PATH):
     """Load Scopus journals table.
 
     Args:
@@ -39,7 +41,7 @@ def load_scopus_journals_full(scopus_xlsx_path):
     return df
 
 
-def load_scopus_journals_reduced(scopus_xlsx_path):
+def load_scopus_journals_reduced(scopus_xlsx_path=SCOPUS_PATH):
     """Load small / reduced Scopus journals table with key columns.
 
         Args:
@@ -89,4 +91,5 @@ def load_scopus_journals_reduced(scopus_xlsx_path):
     dup_titles_safe = (dfs['title_safe'].value_counts() > 1) \
         .loc[lambda v: v].index
     dfs['is_unique_title_safe'] = ~dfs['title_safe'].isin(dup_titles_safe)
+    dfs.set_index('scopus_id', inplace=True)
     return dfs
