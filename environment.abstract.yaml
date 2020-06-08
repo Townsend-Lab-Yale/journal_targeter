@@ -1,0 +1,31 @@
+name: journals
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - pip
+  - python=3
+  - flask
+  - flask-wtf
+  - numpy
+  - pandas
+  - pytest
+  - pytest-cov
+  - python-dotenv
+  - requests
+  - jupyterlab
+  - beautifulsoup4
+  - bokeh
+  - lxml
+  - matplotlib
+  - xlrd
+  - fuzzywuzzy
+  - networkx
+  - beautifulsoup4
+  - html5lib
+  - xmltodict
+  - tabulate
+  - bibtexparser
+  - pip:
+      - iso4
+      - RISparser

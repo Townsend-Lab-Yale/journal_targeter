@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 from pkg_resources import get_distribution, DistributionNotFound
 
 try:
@@ -9,3 +10,5 @@ except DistributionNotFound:
     __version__ = 'unknown'
 finally:
     del get_distribution, DistributionNotFound
+
+DATA_DIR = os.path.sep.join(__file__.split(os.path.sep)[:-3] + ['data'])
