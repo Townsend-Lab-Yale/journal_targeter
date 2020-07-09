@@ -1,5 +1,6 @@
 name: journals
 channels:
+  - bokeh
   - defaults
   - conda-forge
 dependencies:
@@ -14,6 +15,7 @@ dependencies:
   - python-dotenv
   - requests
   - jupyterlab
+  - jupyter_nbextensions_configurator
   - beautifulsoup4
   - bokeh
   - lxml
@@ -26,6 +28,12 @@ dependencies:
   - xmltodict
   - tabulate
   - bibtexparser
+  - seaborn
+  - faker
+  - line_profiler
+  - yaml
   - pip:
       - iso4
       - RISparser
+      - bootstrap-flask
+      - Flask-Session
