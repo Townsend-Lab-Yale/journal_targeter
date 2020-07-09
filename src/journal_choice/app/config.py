@@ -9,6 +9,7 @@ class Config:
     SESSION_TYPE = 'filesystem'
     SESSION_FILE_DIR = os.environ.get('SESSION_FILE_DIR', os.getcwd())
     _logger.info(f"{SESSION_FILE_DIR=}")
+    MAX_CONTENT_LENGTH = 1024 * 1024  # 1MB
     @staticmethod
     def init_app(app):
         pass

@@ -2,6 +2,16 @@ from flask import render_template, request, jsonify
 from . import main
 
 
+@main.app_errorhandler(413)
+def too_large(e):
+    if request.accept_mimetypes.accept_json and \
+            not request.accept_mimetypes.accept_html:
+        response = jsonify({'error': 'file too large'})
+        response.status_code = 413
+        return response
+    return render_template('413.html'), 413
+
+
 @main.app_errorhandler(403)
 def forbidden(e):
     if request.accept_mimetypes.accept_json and \
