@@ -1,48 +1,281 @@
+"""Data consolidation."""
 import os
+import re
 import json
-import multiprocessing
-from collections import defaultdict
+import logging
+from functools import partial
+from collections import defaultdict, OrderedDict
 
 import pandas as pd
 
-from . import scopus, pubmed, DATA_DIR
-# from .pubmed import TitleMatcher
-
-MATCH_PICKLE_PATH = os.path.join(DATA_DIR, 'match.pickle.gz')
-MATCH_JSON_PATH = os.path.join(DATA_DIR, 'scopus_match.json')
-
-
-def load_scopus_map():
-    """Get dictionary of NLM UID -> Scopus ID, based on build_uid_match_table."""
-    with open(MATCH_JSON_PATH) as infile:
-        scopus_id_dict = json.load(infile)
-    return scopus_id_dict
+from . import scopus, DATA_DIR
+from .pubmed import TM, MATCH_JSON_PATH, MATCH_PICKLE_PATH
+from .scopus import SCOP
+from .ref_loading import identify_user_references
+from .lookup import lookup_jane
 
 
-def build_uid_match_table(pm, tm, n_processes=4, write_files=False):
+_logger = logging.getLogger(__name__)
+
+
+def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=None):
+    """Process queries through Jane and build journal, article and ref tables.
+
+    Args:
+        query_title (str): Title text for first Jane search.
+        query_abstract (str): Abstract text for second Jane search.
+        ris_path (str or stream): RIS path or stream from form data.
+        refs_df (pd.DataFrame): (optional) processed ris_path data, prevents
+            ris_path processing (ris_path ignored).
+
+    Returns:
+        Journals and article results, user citations (j, a, jf, af, refs_df).
+            j: tall-form journal and articles, one row per search-result pair.
+            a: tall-form journal and articles, one row per search-result pair.
+            jf: aggregated journal table, combining dups across searches.
+            af: aggregated articles table, combining dups across searches.
+            refs_df: table of de-duplicated articles from citations file.
+    """
+    if query_title is None or query_abstract is None or ris_path is None:
+        _logger.debug("Loading demo data")
+        journals_t, articles_t, refs_df = process_inputs(use_title=True)
+        journals_a, articles_a, _ = process_inputs(use_title=False, refs_df=refs_df)
+    else:
+        refs_kw = dict(ris_path=ris_path) if refs_df is not None else \
+            dict(refs_df=refs_df)
+        journals_t, articles_t, refs_df = process_inputs(
+            input_text=query_title, use_title=True, **refs_kw)
+        journals_a, articles_a, _ = process_inputs(
+            input_text=query_abstract, use_title=False, refs_df=refs_df)
+
+    # Get combined JOURNALS table
+    j1 = journals_t.reset_index()
+    j1.insert(0, 'source', 'title')
+    j2 = journals_a.reset_index()
+    j2.insert(0, 'source', 'abstract')
+    j = pd.concat([j1, j2], axis=0)
+
+    # ADD 'jid' to capture unique journals (by jane_name, influence score)
+    j_tuples = [tuple(i) for i in j[['jane_name', 'influence']].fillna(-1)
+                .drop_duplicates().values]
+    jid_map = {i: str(ind) for ind, i in enumerate(j_tuples)}
+    jids = [jid_map[tuple(i)] for i in j[['jane_name', 'influence']]
+            .fillna(-1).values]
+    j.insert(0, 'jid', jids)
+    source_rank_dict = j.set_index(['source', 'j_rank'])['jid'].to_dict()
+
+    # Add short abbreviation for journals
+    abbrv = j['uid'].map(TM.pm['IsoAbbr'])
+    j['abbr'] = abbrv.where(~abbrv.isnull(), j['journal_name'])
+    j['abbr'] = j['abbr'].apply(lambda v: _get_short_str(v))
+
+    # Get combined ARTICLES table
+    a1 = articles_t.reset_index()
+    a1.insert(0, 'source', 'title')
+    a2 = articles_a.reset_index()
+    a2.insert(0, 'source', 'abstract')
+    a = pd.concat([a1, a2], axis=0)
+    # Add jid to articles table
+    a_jids = [source_rank_dict[tuple(i)] for i in a[['source', 'j_rank']].values]
+    a.insert(0, 'jid', a_jids)
+
+    jf, af = aggregate_journals_articles(j, a)
+
+    return j, a, jf, af, refs_df
+
+
+def aggregate_journals_articles(j, a):
+    """Build jf, af tables from tall-form journals and articles tables.
+
+    Returns:
+        jf, af.
+    """
+    # JF: AGGREGATE JOURNAL TITLE+ABSTRACT RESULTS
+    temp = j.copy()
+    temp['conf_sum'] = temp['confidence']  # placeholder for conf sum aggregation
+    groupby_col = 'jid'
+    get_first = ['journal_name', 'citescore', 'influence', 'tags', 'abbr',
+                 'cited', 'uid', 'scopus_id', 'single_match', 'is_oa']
+    get_sum = ['n_articles', 'sim_sum', 'conf_sum']
+    get_max = ['sim_max']
+    get_min = ['sim_min']
+    get_tuple = ['confidence', 'sims', 'pc_lower']  # inc categ
+    # Basic aggregation columns
+    fn_dict = {i: _get_first_series_val for i in get_first}
+    fn_dict.update({i: pd.Series.sum for i in get_sum})
+    fn_dict.update({i: pd.Series.max for i in get_max})
+    fn_dict.update({i: pd.Series.min for i in get_min})
+    agg_cols = temp.groupby(groupby_col).agg(fn_dict)
+    # Tuple aggregation
+    records = []
+    for ind, g in temp.groupby(groupby_col):
+        rec = _get_agg_record_for_field_list(g, groupby_col, ind, get_tuple)
+        records.append(rec)
+    tuple_cols = pd.DataFrame.from_records(records, index=groupby_col)
+    jf = pd.concat([agg_cols, tuple_cols], axis=1)
+    n_unique = j.merge(a[['jid', 'a_id']], how='left', on=['jid']) \
+        .groupby(groupby_col)['a_id'].nunique()
+    jf['n_unique'] = n_unique
+    jf['conf_pc'] = jf['conf_sum'] / jf['conf_sum'].sum() * 100
+    jf['cites+hits'] = jf['cited'] + jf['n_unique']
+    jf['tags'] = jf['tags'].fillna('')
+    jf['is_open'] = jf['tags'].map(lambda v: '\u2714' if 'open' in v else '')
+    jf['in_medline'] = jf['tags'].map(lambda v: '\u2714' if 'Medline' in v else '')
+    jf['in_pmc'] = jf['tags'].map(lambda v: '\u2714' if 'PMC' in v else '')
+    jf['conf_title'] = jf['confidence'].map(partial(_get_categ_confidence, categ='title'))
+    jf['conf_abstract'] = jf['confidence'].map(partial(_get_categ_confidence, categ='abstract'))
+    jf['initials'] = jf.abbr.apply(_get_initials)
+
+    af = pd.DataFrame.from_records(a.groupby('a_id').apply(_get_article_record).values)
+
+    # Add jane article counts by subgroup to journals table
+    bool_cols = ['t_only', 'a_only', 'in_title', 'in_abstract', 'in_both']
+    n_articles = af.groupby('jid')[bool_cols].sum() \
+        .astype(int).rename(columns={'in_title': 'title',
+                                     't_only': 'title_only',
+                                     'in_abstract': 'abstract',
+                                     'a_only': 'abstract_only',
+                                     'in_both': 'both'})
+    jf = jf.join(n_articles, on='jid', how='left')
+    jf['CAT'] = jf['cited'] + jf['abstract'] + jf['title']
+
+    jf = jf.sort_values(['CAT', 'conf_pc'], ascending=False).reset_index()
+
+    af['abbr'] = af['jid'].map(jf.set_index('jid')['abbr'])
+    af['PMID'] = af['a_id'].str[5:]
+    af['authors_short'] = af['authors'].apply(_get_pm_authors_short)
+    return jf, af
+
+
+def process_inputs(input_text=None, ris_path=None, use_title=True, refs_df=None):
+    """Get similar journals and perform matching (user<>pubmed; JANE<>pubmed).
+
+    """
+    # Get matches and scores
+    journals, articles = lookup_jane(input_text)
+
+    # Add pubmed matching info
+    _logger.info("Matching JANE titles to PubMed titles.")
+    match_jane = TM.match_titles(journals.jane_name)
+    journals = pd.concat([journals, match_jane], axis=1)
+
+    # Process user citations if refs_df not provided
+    if refs_df is None:
+        refs_df = identify_user_references(ris_path)
+
+    # Add citation counts
+    n_cites_dict = refs_df.groupby('uid').size().to_dict()
+    journals['cited'] = journals['uid'].map(n_cites_dict).fillna(0).astype(int)
+
+    # Add citescore
+    journals = journals.join(TM.pm[['main_title', 'scopus_id']], how='left', on='uid') \
+        .join(SCOP[['journal_name', 'citescore']], how='left', on='scopus_id')
+    # Prioritize scopus name, then jane_name if null
+    journals['journal_name'] = journals.journal_name.where(~journals.journal_name.isnull(),
+                                                           journals.jane_name)
+    return journals, articles, refs_df
+
+
+def _get_categ_confidence(conf_str, categ):
+    """Get confidence value from aggregated confidence string.
+
+    Examples:
+        >>> _get_categ_confidence('title:2 abstract:12', 'abstract')
+        12
+        >>> _get_categ_confidence('abstract:12', 'title')
+        ''
+    """
+    match = re.search(f'{categ}:(\d+)', conf_str)
+    return match.groups()[0] if match else ''
+
+
+def _get_article_record(g):
+    od = OrderedDict()
+    od.update(g[['jid', 'title', 'authors', 'year', 'a_id', 'url']]
+              .apply(lambda s: s.iloc[0]).to_dict())
+    od['sim_max'] = g['sim'].max()
+    in_title, in_abstract = [i in g['source'].values for i in ['title', 'abstract']]
+    categ = 'both' if in_title and in_abstract else 'title_only' if in_title else 'abstract_only'
+
+    od.update({'in_title': in_title,
+               'in_abstract': in_abstract,
+               'in_both': in_title and in_abstract,
+               't_only': in_title and not in_abstract,
+               'a_only': in_abstract and not in_title,
+               'categ': categ,
+               })
+    return od
+
+
+def _get_initials(v):
+    first_chars = [i[0] for i in v.split(' ')]
+    initials = ''.join([i for i in first_chars if i.isalpha()])
+    return initials
+
+
+def _get_article_categ(r):
+    if r.in_both:
+        return 'both'
+    if r.in_title:
+        return 'title'
+    if r.in_abstract:
+        return 'abstract'
+    return '???'
+
+
+def _get_pm_authors_short(author_str):
+    author_list = author_str.split(',')
+    n_authors = len(author_list)
+    if n_authors == 1:
+        return author_str
+    surnames = [''.join(i.strip().split(' ')[:-1]) for i in author_list]
+    if n_authors == 2:
+        return ' & '.join(surnames)
+    return f"{surnames[0]} et al"
+
+
+def _get_short_str(v, maxlen=25):
+    if len(v) > 25:
+        return v[:maxlen - 1] + '…'
+    return v
+
+
+def _get_first_series_val(s):
+    return s.iloc[0]
+
+
+def _get_agg_str_for_field(group_df, field_name=None):
+    #     return tuple(g[['categ', field]].values.flatten())
+    use_rows = ~group_df[field_name].isnull()
+    mod_field_series = group_df.loc[use_rows, field_name].convert_dtypes()
+    str_series = group_df[use_rows].source + ':' + mod_field_series.astype(str)
+    return ' '.join(str_series)
+
+
+def _get_agg_record_for_field_list(group_df, index_name, index_value, field_list):
+    out = {index_name: index_value}
+    for field in field_list:
+        out[field] = _get_agg_str_for_field(group_df, field)
+    return out
+
+
+def build_uid_match_table(n_processes=4, write_files=False):
     """Get NLM UIDs for all Scopus journal IDs based on Scopus names and ISSNs.
 
     Args:
-        pm (pd.DataFrame): table of pubmed info, built in pubmed.py.
-        tm (journals.pubmed.TitleMatcher): used to match titles.
         n_processes (int): number of processes. Use mutiprocessing if >1.
         write_files (bool): write match table to pickle and json in DATA dir.
     """
-    tm = pubmed.TitleMatcher(pm)
+    pm = TM.pm
     scop = scopus.load_scopus_journals_reduced()
-    use_multi = True if n_processes > 1 else False
     # Attempt match on Scopus journal titles
     titles = scop.journal_name.values
-    if use_multi:
-        with multiprocessing.Pool(processes=6) as pool:
-            uid_list = list(pool.map(tm.get_uids_from_title, titles))
-    else:
-        uid_list = list(map(tm.get_uids_from_title, titles))
-    match = pd.DataFrame.from_records(uid_list, columns=['on_name', 'name_method'])
-    match = match.set_index(scop.index)
-    is_single = (match.name_method != 'unmatched') & ~match.on_name.apply(lambda v: type(v) is tuple)
-    match['on_name_single'] = is_single
-
+    match = TM.match_titles(titles, n_processes=n_processes)
+    match.rename(columns={
+        'uid': 'on_name',
+        'categ': 'name_method',
+        'single_match': 'on_name_single',
+        }, inplace=True)
     # Add COMBINED ISSN matching info
     pm_issn_comb = pm.loc[pm.is_active, 'issn_comb'].drop_duplicates(keep=False).reset_index()
     scop_issn_comb = scop.issn_comb.drop_duplicates(keep=False).reset_index()
