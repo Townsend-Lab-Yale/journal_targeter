@@ -4,7 +4,9 @@ PUBMED journal list at ftp://ftp.ncbi.nih.gov/pubmed/J_Medline.txt
 """
 
 import os
+import gzip
 import time
+import json
 import pickle
 import shlex
 import shutil
@@ -12,6 +14,7 @@ import logging
 import requests
 import xmltodict
 import contextlib
+import multiprocessing
 from collections import OrderedDict
 from urllib import request as urllib_request
 
@@ -23,17 +26,22 @@ from dotenv import load_dotenv, find_dotenv
 from . import DATA_DIR
 from .helpers import get_issn_safe, get_issn1, get_issn_comb, \
     get_clean_lowercase, grouper
-from .mapping import load_scopus_map
 
 
 JOURNALS_PATH = os.path.join(DATA_DIR, 'J_Medline.txt')
 META_PATH = os.path.join(DATA_DIR, 'meta.pickle.gz')
 URL_ESUMMARY = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi'
 URL_ESEARCH = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi'
-_logger = logging.getLogger(__name__)
 load_dotenv(find_dotenv())  # for NCBI API KEY
 ESUMMARY_PATH = os.environ.get('ESUMMARY_PATH')
 UID_DICT_PATH = os.path.join(DATA_DIR, 'uid_dict.pickle')
+MATCH_PICKLE_PATH = os.path.join(DATA_DIR, 'match.pickle.gz')
+MATCH_JSON_PATH = os.path.join(DATA_DIR, 'scopus_match.json')
+TM = None  #
+TM_PICKLE_PATH = os.path.join(DATA_DIR, 'tm.pickle.gz')
+
+_logger = logging.getLogger(__name__)
+# _logger.setLevel('DEBUG')
 
 
 class HTTPError414(Exception):
@@ -43,8 +51,25 @@ class HTTPError414(Exception):
 class TitleMatcher:
     def __init__(self, pm=None):
         """Match user journal title to PubMed journal data."""
-        if pm is None:
-            pm = load_pubmed_journals(refresh=False)
+        self.pm = None
+        self.titles = None
+        self.safe_abbrv_uid_dict = None
+        self.safe_uid_dict = None
+        self.exact_uid_dict = None
+        self.alt_uid_dict = None
+        self.alt_safe_uid_dict = None
+        self.abbrv_uid_dict = None
+
+        if os.path.exists(TM_PICKLE_PATH):
+            _logger.info('loading from TM pickle')
+            self._init_from_pickle()
+        else:
+            if pm is None:
+                _logger.info('no TM pickle, no pm provided')
+                pm = load_pubmed_journals(refresh=False)
+            self._init_from_pm(pm)
+
+    def _init_from_pm(self, pm):
         self.pm = pm
         titles = self._gather_titles(pm)
         self.titles = titles
@@ -74,6 +99,53 @@ class TitleMatcher:
         safe_abbrv_uid_dict = temp.reset_index().groupby('isoabbr_safe')\
             .apply(lambda g: tuple(g.uid.unique())).to_dict()
         self.safe_abbrv_uid_dict = safe_abbrv_uid_dict
+
+    def _init_from_pickle(self):
+        with gzip.open(TM_PICKLE_PATH, 'r') as infile:
+            data = pickle.load(infile)
+        self.safe_abbrv_uid_dict = data['safe_abbrv_uid_dict']
+        self.safe_uid_dict = data['safe_uid_dict']
+        self.exact_uid_dict = data['exact_uid_dict']
+        self.alt_uid_dict = data['alt_uid_dict']
+        self.alt_safe_uid_dict = data['alt_safe_uid_dict']
+        self.abbrv_uid_dict = data['abbrv_uid_dict']
+        self.titles = data['titles']
+        self.pm = data['pm']
+
+    def match_titles(self, titles, n_processes=1):
+        """Match multiple titles against pubmed sources.
+
+        Args:
+            titles (iterable): titles to match.
+            n_processes (int): Processor count for mapping single title lookup.
+        Returns:
+            match table (pd.DataFrame): inc input_title, uid,
+                categ (type of match, e.g. safe abbreviation),
+                single_match (bool for exactly one match).
+        """
+        use_multi = n_processes > 1
+        if use_multi:
+            with multiprocessing.Pool(processes=n_processes) as pool:
+                uid_list = list(pool.map(TM.get_uids_from_title, titles))
+        else:
+            uid_list = list(map(self.get_uids_from_title, titles))
+        match = pd.DataFrame.from_records(uid_list, columns=['uid', 'categ'])
+        match.insert(0, 'input_title', titles)
+        is_unmatched = (match.categ == 'unmatched')
+        is_multiple = match.uid.apply(lambda v: type(v) is tuple and len(v) > 1)
+        is_single = ~is_unmatched & ~is_multiple  # type: pd.Series
+        match['single_match'] = is_single
+        if type(titles) is pd.Series:
+            match.set_index(titles.index, inplace=True)
+        n_nonsingle = (~is_single).sum()
+        if n_nonsingle:
+            unmatched = list(match.loc[is_unmatched, 'input_title'])
+            multiple_match = list(match.loc[is_multiple, 'input_title'])
+            _logger.debug(f"Failed to generate unique match for {n_nonsingle} titles: "
+                         f"{unmatched=}, {multiple_match=}.")
+        else:
+            _logger.debug("Uniquely matched all titles")
+        return match
 
     def get_uids_from_title(self, user_title):
         """"Get UIDs corresponding to provided journal title.
@@ -399,3 +471,13 @@ def _unused_test_nlmids_for_lookup_failure(ids):
     if not problem_ids:
         _logger.info("IDs looked up successfully.")
     return problem_ids
+
+
+def load_scopus_map():
+    """Get dictionary of NLM UID -> Scopus ID, based on build_uid_match_table."""
+    with open(MATCH_JSON_PATH) as infile:
+        scopus_id_dict = json.load(infile)
+    return scopus_id_dict
+
+
+TM = TitleMatcher()

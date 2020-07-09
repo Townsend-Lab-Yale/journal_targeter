@@ -5,17 +5,13 @@ import pandas as pd
 from RISparser import readris
 from RISparser.config import TAG_KEY_MAPPING
 
+from . import pubmed
+
 
 _logger = logging.getLogger(__name__)
-_logger.setLevel('DEBUG')
+# _logger.setLevel('DEBUG')
 
-
-def _first_valid_title(title_series):
-    titles = title_series.dropna()
-    n_options = titles.size
-    title = titles.iloc[0] if n_options else np.nan
-    return title
-
+TM = pubmed.TM
 
 # journal name in T2 (paperpile), JF (mendeley)
 _NAME_FIELD_PREFERENCE = [
@@ -27,15 +23,123 @@ _NAME_FIELD_PREFERENCE = [
     'T2',  # secondary / journal title
 ]
 
+_TITLE_TAG_OPTIONS = ['TI', 'T1']
+_AUTHOR_TAG_OPTIONS = ['AU', 'A1']
+_YEAR_TAG_OPTIONS = ['PY', 'Y1']
+
 _TYPE_COL = TAG_KEY_MAPPING['TY']
-_DUP_FIELDS = ['DO', 'TI']
-_USE_TYPES = {'JOUR', 'JFULL'}
+_DUP_FIELDS = ['DO', 'TI', 'T1']  # columns used for identifying citation dups
+_USE_TYPES = {'JOUR', 'JFULL'}  # ignore everything that isn't a journal article
 
 
-def read_ris_file(ris_path):
+def _get_journal_names(df):
+    """Identify journal names from parsed RIS table."""
+    options = _NAME_FIELD_PREFERENCE.copy()
+    return _get_values_for_tag_options(df, tag_options=options)
+
+
+def _get_article_titles(df):
+    """Identify article titles from parsed RIS table."""
+    options = _TITLE_TAG_OPTIONS.copy()
+    return _get_values_for_tag_options(df, tag_options=options)
+
+
+def _get_authors(df):
+    """Identify author names from parsed RIS table."""
+    options = _AUTHOR_TAG_OPTIONS.copy()
+    authors = _get_values_for_tag_options(df, tag_options=options)
+    # convert to list of strings, shortened e.g. by et al
+    authors = [_shorten_authors(i) if type(i) is list else i for i in authors]
+    return authors
+
+
+def _shorten_authors(author_list):
+    """Get short string for author list, e.g. Gaffney et al."""
+    short_names = [i.split(',')[0] if ',' in i else i for i in author_list]
+    if len(author_list) > 2:
+        first_author = short_names[0]
+        short = f'{first_author} et al'
+        return short
+    if len(author_list) == 2:
+        ' & '.join(short_names)
+    return author_list[0]
+
+
+def _get_years(df):
+    """Identify publication years from parsed RIS table."""
+    options = _YEAR_TAG_OPTIONS.copy()
+    years = _get_values_for_tag_options(df, tag_options=options)
+    # convert to list to shorten cases like '2018///'
+    years = [i[:4] if type(i) is str and len(i) > 4 else i for i in years]
+    return years
+
+
+def _get_values_for_tag_options(df, tag_options=None):
+    """Extract first non-null value from columns corresponding to RIS tag options.
+
+    Args:
+        df (pd.DataFrame): parsed RIS table.
+        tag_options (list): allowed tags corresponding to field, in order of
+            preference. e.g. _NAME_FIELD_PREFERENCE for title
+    """
+    # IDENTIFY JOURNAL NAMES
+    name_col_preference = [TAG_KEY_MAPPING[i] for i in tag_options
+                           if i in TAG_KEY_MAPPING]
+    column_options = [i for i in df.columns if i in name_col_preference]
+    _logger.debug(f"Column options: {column_options}.")
+    return df[column_options].apply(_first_non_null, axis=1)
+
+
+def identify_user_references(ris_path):
+    """Get match table: load references, count citations, match journal names.
+
+    Args:
+        ris_path (str): RIS references file path.
+
+    Returns:
+        refs_df table (pd.DataFrame). Includes columns for:
+            - journal matching info: uid, scopus_id, categ, single_match, user_journal
+            - article info: use_article_title, use_year, use_authors
+            - extra article info: may include some/all of type_of_reference,
+            primary_title, first_authors, publication_year, alternate_title3,
+            volume, number, start_page, end_page, doi, url, and others...
+        ...
+    """
+    df = _read_ris_file(ris_path)
+    journal_names_uniq = df.journal.unique()
+    # Add matching info (uid, categ, single_match) to user refs table
+    m = TM.match_titles(journal_names_uniq)
+    df = df.join(m.set_index('input_title'), how='left', on='journal')
+    # put UID column first
+    df = df[['uid'] + [i for i in df.columns if i != 'uid']].copy()
+    # add scopus ID
+    scopus_id_dict = pubmed.load_scopus_map()
+    scopus_ids = df['uid'].map(lambda v: scopus_id_dict.get(v, np.nan))
+    df.insert(1, 'scopus_id', scopus_ids)
+    # rename 'journal' to 'user_journal'
+    df.rename(columns={'journal': 'user_journal'}, inplace=True)
+    unrecognized_titles = list(df.loc[df.scopus_id.isnull(), 'user_journal'])
+    if unrecognized_titles:
+        _logger.info(f"Titles without scopus match in user RIS: {unrecognized_titles}")
+    else:
+        _logger.info(f"All titles in user RIS have scopus match.")
+    return df
+
+
+def _first_non_null(title_series):
+    titles = title_series.dropna()
+    n_options = titles.size
+    title = titles.iloc[0] if n_options else np.nan
+    return title
+
+
+def _read_ris_file(ris_data):
     """Load table of references from RIS file path."""
-    with open(ris_path, 'r') as bibfile:
-        entries = readris(bibfile)
+    if 'readlines' in dir(ris_data):
+        entries = readris(ris_data)
+    else:
+        with open(ris_data, 'r') as bibfile:
+            entries = readris(bibfile)
     df = pd.DataFrame.from_records(entries)
     _logger.debug(f"Loaded {len(df)} entries via RIS.")
     # RESTRICT TO JOURNAL ROWS
@@ -44,15 +148,15 @@ def read_ris_file(ris_path):
         _logger.debug(f"Skipped {len(skipped_types)} entry type(s): {skipped_types}")
     df = df[df[_TYPE_COL].isin(_USE_TYPES)]
     # IDENTIFY JOURNAL NAMES
-    name_col_preference = [TAG_KEY_MAPPING[i] for i in _NAME_FIELD_PREFERENCE
-                           if i in TAG_KEY_MAPPING]
-    j_name_options = [i for i in df.columns if i in name_col_preference]
-    _logger.debug(f"Title column options: {j_name_options}")
-    df.insert(0, 'journal',
-              df[j_name_options].apply(_first_valid_title, axis=1))
+    df.insert(0, 'journal', _get_journal_names(df))
+    df.insert(1, 'use_article_title', _get_article_titles(df))
+    df.insert(2, 'use_year', _get_years(df))
+    df.insert(3, 'use_authors', _get_authors(df))
+
     # DEDUPLICATE, ignoring all-nan matching fields
     dup_cols = [TAG_KEY_MAPPING[i] for i in _DUP_FIELDS
                 if i in TAG_KEY_MAPPING]
+    dup_cols = [i for i in dup_cols if i in df.columns]
     check_inds = (~df[dup_cols].isnull().all(axis=1)).loc[lambda v: v].index
     checkable = len(check_inds) > 1
     if checkable:
@@ -64,30 +168,3 @@ def read_ris_file(ris_path):
     else:
         _logger.debug("No suitable columns to check for duplicates.")
     return df
-
-
-def match_journals(tm, journal_counts):
-    """Get UIDs (and matching methods) for parsed user input.
-
-    Args:
-        tm (TitleMatcher): pubmed TitleMatcher for matching.
-        journal_counts (Union[pd.Series, dict, OrderedDict, Counter]):
-            map from journal name (index/keys) to citation count (values)
-    """
-    if type(journal_counts) is pd.Series:
-        user_titles = list(journal_counts.index)
-        n_citations = list(journal_counts.values)
-    else:
-        user_titles = list(journal_counts.keys())
-        n_citations = list(journal_counts.values())
-
-    uids, methods = zip(*map(tm.get_uids_from_title, user_titles))
-    m = pd.DataFrame({'user_title': user_titles, 'uids': uids,
-                      'n_citations': n_citations,  'method': methods})
-    unmatched_titles = list(m.loc[m.method == 'unmatched', 'user_title'])
-    n_unmatched = len(unmatched_titles)
-    n_matched = len(m) - n_unmatched
-    _logger.debug(f"Successfully matched {n_matched} journals.")
-    _logger.debug(f"{n_unmatched=}")
-    _logger.debug(f"{unmatched_titles=}")
-    return m
