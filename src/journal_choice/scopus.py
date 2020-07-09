@@ -1,5 +1,6 @@
-""""Scopus Sources table via https://www.scopus.com/sources"""
+""""Load Scopus journals table. Data via https://www.scopus.com/sources."""
 import os
+import logging
 import numpy as np
 import pandas as pd
 
@@ -7,24 +8,28 @@ from . import DATA_DIR
 from .helpers import get_issn_safe, get_issn1, get_issn_comb, get_clean_lowercase
 
 
-SCOPUS_PATH = os.path.join(DATA_DIR, 'scopus', 'ext_list_october_2019.xlsx')
+SCOPUS_XLSX_PATH = os.path.join(DATA_DIR, 'scopus', 'ext_list_october_2019.xlsx')
+SCOPUS_PICKLE_PATH = os.path.join(DATA_DIR, 'scopus.pickle.gz')
 CITESCORE_YEAR = '2018'  # @TODO: Identify latest year in sources xlsx file
+
+SCOP = None  # will be populated with reduced scopus table
 
 _COL_RENAME_DICT = {
     'Sourcerecord id': 'scopus_id',
     'Source Title (Medline-sourced journals are indicated in Green)': 'journal_name',
     'Article language in source (three-letter ISO language codes)': 'lang',
-    f'{CITESCORE_YEAR} CiteScore': 'citescore_latest',
+    f'{CITESCORE_YEAR} CiteScore': 'citescore',
     'Medline-sourced Title? (see more info under separate tab)': 'is_medline',
     'Publisher imprints grouped to main Publisher': 'imprints',
     "Publisher's Country/Territory": 'publisher_region',
     "Open Access status, i.e., registered in DOAJ and/or ROAD. Status September 2019":
         'open_access_status',
-
 }
 
+_logger = logging.getLogger(__name__)
 
-def load_scopus_journals_full(scopus_xlsx_path=SCOPUS_PATH):
+
+def load_scopus_journals_full(scopus_xlsx_path=SCOPUS_XLSX_PATH):
     """Load Scopus journals table.
 
     Args:
@@ -41,7 +46,7 @@ def load_scopus_journals_full(scopus_xlsx_path=SCOPUS_PATH):
     return df
 
 
-def load_scopus_journals_reduced(scopus_xlsx_path=SCOPUS_PATH):
+def load_scopus_journals_reduced(scopus_xlsx_path=SCOPUS_XLSX_PATH):
     """Load small / reduced Scopus journals table with key columns.
 
         Args:
@@ -60,7 +65,7 @@ def load_scopus_journals_reduced(scopus_xlsx_path=SCOPUS_PATH):
                  'lang',
                  #  '2016 CiteScore',
                  #  '2017 CiteScore',
-                 'citescore_latest',
+                 'citescore',
                  'is_medline',
                  'open_access_status',
                  #  'Articles in Press included?',
@@ -93,3 +98,13 @@ def load_scopus_journals_reduced(scopus_xlsx_path=SCOPUS_PATH):
     dfs['is_unique_title_safe'] = ~dfs['title_safe'].isin(dup_titles_safe)
     dfs.set_index('scopus_id', inplace=True)
     return dfs
+
+
+if not os.path.exists(SCOPUS_PICKLE_PATH):
+    _logger.info("Building scopus data, and saving to pickle.")
+    dfs = load_scopus_journals_reduced()
+    dfs.to_pickle(SCOPUS_PICKLE_PATH)
+    SCOP = dfs
+else:
+    _logger.info("Loading scopus data from pickle.")
+    SCOP = pd.read_pickle(SCOPUS_PICKLE_PATH)
