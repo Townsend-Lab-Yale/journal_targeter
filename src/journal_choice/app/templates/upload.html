@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{#{% import "bootstrap/wtf.html" as wtf %}#}
+{% import 'bootstrap/form.html' as bootstrap %}
+
+{% import "utils.html" as utils %}
+
+
+{% block page_content %}
+
+{{super()}}
+
+    <h1 class="mt-3">Search inputs</h1>
+
+    <p class="mt-3">Enter your title, abstract and references file (in RIS format) below. </p>
+
+
+{#{% macro render_form(form,    #}
+{#                    action="",#}
+{#                    method="post",#}
+{#                    extra_classes=None,#}
+{#                    role="form",#}
+{#                    form_type="basic",#}
+{#                    horizontal_columns=('lg', 2, 10),#}
+{#                    enctype=None,#}
+{#                    button_map={},#}
+{#                    button_style="",#}
+{#                    button_size="",#}
+{#                    id="",#}
+{#                    novalidate=False,#}
+{#                    render_kw={}) %}#}
+{{ bootstrap.render_form(
+        form, form_type='horizontal',
+        horizontal_columns=('lg', 2, 6),
+        extra_classes='text-right',
+        button_size='md'
+        ) }}
+
+{% endblock page_content%}

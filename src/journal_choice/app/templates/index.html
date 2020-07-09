@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+
+    <div id="intro">
+        <p class="mb-0">Journals with similar articles are shown below.</p>
+        <ul>
+            <li>Hover over the plot to see corresponding journal and article information.</li>
+            <li>Click through the tabs to see different views of the data.</li>
+        </ul>
+    </div>
+
+
+
+    <div class="row ">
+        <div class="col-lg-9 bokeh order-2 order-xl-1 ">
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+              <li class="nav-item">
+                <a class="nav-link active" id="main-tab" data-toggle="tab" href="#main" role="tab" aria-controls="home" aria-selected="true">ICATS</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" id="profile-tab" data-toggle="tab" href="#table" role="tab" aria-controls="datatable" aria-selected="false">Table</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" id="profile-tab" data-toggle="tab" href="#scatter" role="tab" aria-controls="scatter" aria-selected="false">Scatter</a>
+              </li>
+            </ul>
+            <div class="tab-content" id="myTabContent">
+              <div class="tab-pane fade show active" id="main" role="tabpanel" aria-labelledby="main-tab">
+                  {{ bokeh_divs['icats']|safe }}
+              </div>
+              <div class="tab-pane fade" id="table" role="tabpanel" aria-labelledby="table-tab">
+                  Sort journals by clicking on column headers.
+                  <div style="overflow:scroll">
+                  {{ bokeh_divs['table']|safe }}
+                  </div>
+              </div>
+              <div class="tab-pane fade" id="scatter" role="tabpanel" aria-labelledby="scatter-tab">
+                  <div style="overflow:scroll">
+                  {{ bokeh_divs['scatter']|safe }}
+                  </div>
+              </div>
+            </div>
+
+        </div>
+        <div class="col-lg-3 order-1 order-xl-2">
+            <div><span class="small text-muted">Your inputs:</span></div>
+            <p class="text-dark font-weight-bold mb-0">{{ query_title }}</p>
+            <p class="text-sm text-justify small font-weight-light">{{ query_abstract }}</p>
+            <p class="text-dark mb-0">References file: {{ query_ris }}</p>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ bokeh_js|safe }}
+{% endblock %}
