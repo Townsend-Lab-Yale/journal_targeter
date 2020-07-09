@@ -1,5 +1,9 @@
 .env
+.env.*
 data/scopus
+notebooks/
+data/
+*/.ipynb_checkpoints
 
 # Temporary and binary files
 *~
