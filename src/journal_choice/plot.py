@@ -248,7 +248,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     #     n_journals = len(jf)
     width_l, width_m, width_r = 300, 120, 300
     box_height = 0.95
-    TOOLS = "ypan,ywheel_zoom,reset"
+    TOOLS = "ypan,ywheel_zoom,reset,tap"
 
     text_props = {"text_align": "center", "text_baseline": "middle",
                   'text_color': '#000000', 'text_font_size': '10pt'}
@@ -310,6 +310,8 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     r_as = p_r.circle(y=bkt.jitter('jid', width=0.5, range=p_r.y_range),
                       x='sim_max', source=source_a,  # x_range_name='ax_sim',
                       size=10, alpha=0.5, color=factor_cm,)
+    taptool = p_r.select(type=bkm.TapTool)
+    taptool.callback = bkm.OpenURL(url='@url')
 
     # HOVERTOOLS
     cite_cols_dict = {'use_year': 'year',
