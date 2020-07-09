@@ -1,5 +1,6 @@
 import re
 import sys
+import unicodedata
 from collections import OrderedDict
 
 import bs4
@@ -7,12 +8,11 @@ import requests
 import numpy as np
 import pandas as pd
 
-
 import logging
 logging.basicConfig(format='%(levelname)s: %(message)s',  # %(asctime)-15s
                     level=logging.INFO, stream=sys.stdout)
 
-JANE_URL = "http://jane.biosemantics.org/suggestions.php"
+JANE_URL = "https://jane.biosemantics.org/suggestions.php"
 
 
 def lookup_jane(text=None):
@@ -25,7 +25,8 @@ def lookup_jane(text=None):
         journals (pd.DataFrame): table of journals, ordered by rank
         articles (pd.DataFrame): table of articles, includes journal rank column.
     """
-
+    if text is None:
+        raise TypeError("Query text is required for Jane search.")
     form_dict = {'text': text,
                  'languageCount': 7,
                  'typeCount': 19,
@@ -33,7 +34,7 @@ def lookup_jane(text=None):
                  'pubmedcentral': 'no preference',
                  'findJournals': 'Find journals'}
 
-    inf_template = r'Article Influence = ([\d\.]+). Of all journals, (\d+)% ' \
+    inf_template = r'Article Influence = [<]?([\d\.]+). Of all journals, (\d+)% ' \
                    'has a lower Article Influence score.'
     sim_template = r'Similarity to your query is (\d+)%'
 
@@ -65,6 +66,7 @@ def lookup_jane(text=None):
             influence, pc_lower = re.match(inf_template, inf_title).groups()
         else:
             influence, pc_lower = np.nan, np.nan
+        tags = [unicodedata.normalize('NFKD', i) for i in tags]
         row_dict = OrderedDict({'confidence': confidence,
                                 'journal_name': journal_name,
                                 'tags': '|'.join(tags),
@@ -76,6 +78,7 @@ def lookup_jane(text=None):
     journals['confidence'] = journals['confidence'].astype(int)
     journals['influence'] = journals['influence'].astype(float)
     journals['pc_lower'] = journals['pc_lower'].astype(float)
+    journals['is_oa'] = journals.tags.str.contains('open access')
     journals.index.name = 'j_rank'
 
     # PARSE ARTICLES
@@ -105,4 +108,16 @@ def lookup_jane(text=None):
     articles = pd.DataFrame(a_list)
     articles['sim'] = articles['sim'].astype(int)
 
+    # Get some aggregated journal/article info into journals table
+    n_articles = articles.groupby('j_rank').size()
+    sim_sum = articles.groupby('j_rank')['sim'].sum()
+    sim_max = articles.groupby('j_rank')['sim'].max()
+    sim_min = articles.groupby('j_rank')['sim'].min()
+    sims = articles.groupby('j_rank')['sim'].apply(lambda s: '|'.join([str(i) for i in s]))
+    meta = pd.concat([n_articles, sim_sum, sim_max, sim_min, sims], axis=1)
+    meta.columns = ['n_articles', 'sim_sum', 'sim_max', 'sim_min', 'sims']
+    journals = pd.concat([journals, meta], axis=1)
+    col_order = ['journal_name', 'influence', 'n_articles', 'sim_sum', 'sim_max', 'pc_lower']
+    col_order += [i for i in journals.columns if i not in col_order]
+    journals = journals[col_order].rename(columns={'journal_name': 'jane_name'})
     return journals, articles
