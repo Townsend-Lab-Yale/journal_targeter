@@ -43,7 +43,8 @@ def demo():
     demo_prefix = os.environ.get('DEMO_PREFIX')
 
     # Temporary demo update process
-    force_update = True
+    force_update = (os.environ.get('FORCE_DEMO_UPDATE', 'false').lower()
+                    in ['true', '1'])
     if force_update:
         from ...demo import update_demo_plot
         update_demo_plot('sars')
