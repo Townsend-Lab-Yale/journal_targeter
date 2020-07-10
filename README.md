@@ -1,16 +1,4 @@
-journal_choice
+# Journal Choice
 
-
-Journal choice app.
-
-
-Description
-===========
-
-A longer description of your project goes here...
-
-
-Installation
-============
-
-wordnet
+A web app for journal suitability metrics, based on manuscript title, abstract 
+and references.
