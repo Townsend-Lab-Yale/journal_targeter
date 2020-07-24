@@ -41,7 +41,7 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
         journals_t, articles_t, refs_df = process_inputs(use_title=True)
         journals_a, articles_a, _ = process_inputs(use_title=False, refs_df=refs_df)
     else:
-        refs_kw = dict(ris_path=ris_path) if refs_df is not None else \
+        refs_kw = dict(ris_path=ris_path) if refs_df is None else \
             dict(refs_df=refs_df)
         journals_t, articles_t, refs_df = process_inputs(
             input_text=query_title, use_title=True, **refs_kw)
