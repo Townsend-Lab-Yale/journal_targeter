@@ -5,10 +5,8 @@ from collections import OrderedDict
 import numpy as np
 import matplotlib as mpl
 import bokeh as bk
-from bokeh import io as bkio
 from bokeh import embed as bke
 from bokeh import models as bkm
-from bokeh import events as bkev
 from bokeh import layouts as bkl
 from bokeh import plotting as bkp
 from bokeh import transform as bkt
@@ -25,7 +23,8 @@ def get_bokeh_components(jf, af, refs_df):
     plots = OrderedDict()
     plots['icats'] = plot_icats(source_j, source_a, source_c)
     plots['table'] = plot_datatable(source_j)
-    plots['scatter'] = plot_scatter(source_j)
+    plots['fit'] = plot_fit_scatter(source_j)
+    plots['prospect'] = plot_prospect_scatter(source_j)
     bokeh_js, bokeh_divs = bke.components(plots)
     return bokeh_js, bokeh_divs
 
@@ -43,6 +42,7 @@ def build_bokeh_sources(jf, af, refs_df):
     jfs['loc_title'] = 'title'
     jfs['ax_impact'] = jfs['citescore']  # redundant column for metric toggling
     jfs['ax_match'] = jfs['sim_max']  # redundant column for suitability toggling
+    jfs['prospect'] = jfs[f"p_{_DEFAULT_IMPACT}"]
     source_j = bkm.ColumnDataSource(jfs)
 
     # ARTICLES
@@ -60,7 +60,73 @@ def build_bokeh_sources(jf, af, refs_df):
     return source_j, source_a, source_c
 
 
-def plot_scatter(source_j, show_plot=False, **kwargs):
+def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
+    TOOLS = "pan,wheel_zoom,tap,box_select,reset"
+    plot_width, plot_height = 800, 400
+    label_dict = {'citescore': 'CiteScore',
+                  'influence': 'Influence',
+                  }
+    impact_cols = ['citescore', 'influence']
+
+    fig_kws = dict(tools=TOOLS, plot_width=plot_width, plot_height=plot_height,
+                   x_axis_label=label_dict[_DEFAULT_IMPACT], y_axis_label='Prospect')
+
+    # IMPACT VS PROSPECT FIGURE (p1)
+    p1 = bkp.figure(**fig_kws)
+    impact_kws = dict(x=_DEFAULT_IMPACT, y='prospect')
+    _add_scatter(fig=p1, source=source_j, **impact_kws)
+
+    # WIDGETS
+    select_kws = dict(width=150, width_policy='fixed', margin=(5, 5, 5, 45))
+    select1 = bkm.widgets.Select(title="Impact metric:",
+                                 value=label_dict[_DEFAULT_IMPACT],
+                                 options=[label_dict[i] for i in impact_cols],
+                                 **select_kws)
+    option_dict = {label_dict[i]: i for i in label_dict}
+
+    def get_prospect_js():
+        code = """
+        const option = select.value;
+        const option_dict = %s;
+        const new_data = Object.assign({}, source.data);
+        new_data.prospect = source.data['p_'.concat(option_dict[option])];
+        ax[0].axis_label = option;
+        source.data = new_data;
+        slider.value = 1;
+        """ % option_dict
+        return code
+
+    slider = bkm.widgets.Slider(start=0.05, end=5, value=1, step=0.05, title="Weight")
+
+    select1.js_on_change('value', bkm.callbacks.CustomJS(
+        args=dict(select=select1, ax=p1.xaxis, source=source_j, slider=slider),
+        code=get_prospect_js()))
+    slider.js_on_change('value', bkm.CustomJS(args=dict(source=source_j, select=select1), code="""
+        const new_data = Object.assign({}, source.data);
+        const col_names = %s;
+        const weight = cb_obj.value;
+        const impact_col = col_names[select.value];
+        const impact_vals = source.data[impact_col];
+        const cat_vals = source.data['CAT']
+        let prospects = [];
+        for (let ind = 0; ind < impact_vals.length; ind++){
+            let impact = impact_vals[ind];
+            let cat = cat_vals[ind];
+            let p = cat / (weight * impact + cat);
+            prospects.push(p);
+        }
+        new_data.prospect = prospects;
+        source.data = new_data;
+
+    """ % option_dict))
+
+    grid = bkl.gridplot([[bkl.row(select1, slider)], [p1]], toolbar_location='left')
+    if show_plot:
+        bk.io.show(grid)
+    return grid
+
+
+def plot_fit_scatter(source_j, show_plot=False, **kwargs):
     """Scatter plot: CAT vs CiteScore."""
     TOOLS = "pan,wheel_zoom,tap,box_select,reset"
     plot_width, plot_height = 400, 400
@@ -76,50 +142,21 @@ def plot_scatter(source_j, show_plot=False, **kwargs):
     range_cat = bkm.Range1d(start=0, end=max_cat + 0.5, bounds=[0, max_cat + 0.5])
     ticker_cat = bkm.FixedTicker(ticks=list([i + 1 for i in range(max_cat)]))
     cat_jitter = bkt.jitter('CAT', 0.3, range=range_cat)
-    cmap_oa = bkt.factor_cmap('is_open', palette=['red', 'blue'], factors=['✔', ''])
-    view_closed = bkm.CDSView(source=source_j,
-                              filters=[bkm.BooleanFilter(~source_j.data['is_oa'])])
-    view_open = bkm.CDSView(source=source_j,
-                            filters=[bkm.BooleanFilter(source_j.data['is_oa'])])
-    # max_score = np.nanmax([np.nanmax(source_j.data['citescore']), 1])
-    # max_inf = np.nanmax([np.nanmax(source_j.data['influence']), 1])
-    # range_impact = bkm.Range1d(start=0, end=max_score + 1, bounds=[0, max_score + 1])
 
     fig_kws = dict(tools=TOOLS, plot_width=plot_width, plot_height=plot_height,
                    y_axis_label=label_dict[_DEFAULT_IMPACT])
-    scatter_kws = dict(size=10, color=cmap_oa, source=source_j)
-    closed_kws = dict(legend_label='closed', fill_alpha=0.3, view=view_closed)
-    open_kws = dict(legend_label='open', fill_alpha=0.6, view=view_open)
 
     # CAT VS IMPACT FIGURE (p1)
     p1 = bkp.figure(x_range=range_cat, x_axis_label=label_dict['CAT'],
                     **fig_kws)
     p1.xaxis.ticker = ticker_cat
     impact_kws = dict(x=cat_jitter, y='ax_impact')
-    r1_open = p1.circle(**impact_kws, **open_kws, **scatter_kws)
-    r1_closed = p1.circle(**impact_kws, **closed_kws, **scatter_kws)
+    _add_scatter(p1, source=source_j, **impact_kws)
 
     # SIM VS IMPACT FIGURE (p2)
     p2 = bkp.figure(x_axis_label=label_dict[_DEFAULT_MATCH], **fig_kws)
     match_kws = dict(x='ax_match', y='ax_impact')
-    r2_open = p2.circle(**match_kws, **open_kws, **scatter_kws)
-    r2_closed = p2.circle(**match_kws, **closed_kws, **scatter_kws)
-
-    tooltips = [
-        ('journal_name', '@journal_name'),
-        ('CiteScore', '@cs_table'),
-        ('Influence', '@inf_table'),
-        ('CAT', '@CAT (@cited, @abstract, @title)'),
-    ]
-    # hover_js = "window.ss = source; source.set('selected', cb_data['index']);"
-    # cb_hover = bkm.CustomJS(args=dict(source=source_j), code=hover_js)
-    p1.add_tools(bkm.HoverTool(renderers=[r1_open, r1_closed], tooltips=tooltips))  # , callback=cb_hover
-    p2.add_tools(bkm.HoverTool(renderers=[r2_open, r2_closed], tooltips=tooltips))
-    for fig in [p1, p2]:
-        # fig.add_tools(hover)
-        fig.legend.click_policy = 'hide'
-        taptool = fig.select(type=bkm.TapTool)
-        taptool.callback = bkm.OpenURL(url=_URL_NLM)
+    _add_scatter(fig=p2, source=source_j, **match_kws)
 
     # WIDGETS
     select_kws = dict(width=150, width_policy='fixed', margin=(5, 5, 5, 45))
@@ -166,8 +203,34 @@ def plot_scatter(source_j, show_plot=False, **kwargs):
     # column = bkl.column([select1, p1])
     grid = bkl.gridplot([[select1, select2], [p1, p2]], toolbar_location='left')
     if show_plot:
-        bkio.show(grid)
+        bk.io.show(grid)
     return grid
+
+
+def _add_scatter(fig=None, source=None, **kwargs):
+    """Add circle renderers for open and closed journals, inc hover + tap."""
+    cmap_oa = bkt.factor_cmap('is_open', palette=['red', 'blue'], factors=['✔', ''])
+    view_closed = bkm.CDSView(source=source,
+                              filters=[bkm.BooleanFilter(~source.data['is_oa'])])
+    view_open = bkm.CDSView(source=source,
+                            filters=[bkm.BooleanFilter(source.data['is_oa'])])
+    scatter_kws = dict(size=10, color=cmap_oa, source=source)
+    closed_kws = dict(legend_label='closed', fill_alpha=0.3, view=view_closed)
+    open_kws = dict(legend_label='open', fill_alpha=0.6, view=view_open)
+
+    r1_open = fig.circle(**open_kws, **scatter_kws, **kwargs)
+    r1_closed = fig.circle(**closed_kws, **scatter_kws, **kwargs)
+
+    tooltips = [
+        ('journal_name', '@journal_name'),
+        ('CiteScore', '@cs_table'),
+        ('Influence', '@inf_table'),
+        ('CAT', '@CAT (@cited, @abstract, @title)'),
+    ]
+    fig.add_tools(bkm.HoverTool(renderers=[r1_open, r1_closed], tooltips=tooltips))  # , callback=cb_hover
+    taptool = fig.select(type=bkm.TapTool)
+    taptool.callback = bkm.OpenURL(url=_URL_NLM)
+    fig.legend.click_policy = 'hide'
 
 
 def plot_datatable(source_j, show_plot=False, table_kws=None):

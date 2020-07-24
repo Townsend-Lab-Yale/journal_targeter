@@ -138,6 +138,8 @@ def aggregate_journals_articles(j, a):
                                      'in_both': 'both'})
     jf = jf.join(n_articles, on='jid', how='left')
     jf['CAT'] = jf['cited'] + jf['abstract'] + jf['title']
+    for impact_col in ['citescore', 'influence']:
+        jf[f'p_{impact_col}'] = jf['CAT'] / (jf['CAT'] + jf[impact_col])
 
     jf = jf.sort_values(['CAT', 'conf_pc'], ascending=False).reset_index()
 

@@ -16,17 +16,23 @@
         <div class="col-lg-9 bokeh order-2 order-xl-1 ">
             <ul class="nav nav-tabs" id="myTab" role="tablist">
               <li class="nav-item">
-                <a class="nav-link active" id="main-tab" data-toggle="tab" href="#main" role="tab" aria-controls="home" aria-selected="true">ICATS</a>
+                <a class="nav-link active" id="prospect-tab" data-toggle="tab" href="#prospect" role="tab" aria-controls="prospect" aria-selected="true">Prospect</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" id="profile-tab" data-toggle="tab" href="#table" role="tab" aria-controls="datatable" aria-selected="false">Table</a>
+                <a class="nav-link" id="icats-tab" data-toggle="tab" href="#icats" role="tab" aria-controls="icats" aria-selected="false">ICATS</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" id="profile-tab" data-toggle="tab" href="#scatter" role="tab" aria-controls="scatter" aria-selected="false">Scatter</a>
+                <a class="nav-link" id="table-tab" data-toggle="tab" href="#table" role="tab" aria-controls="datatable" aria-selected="false">Table</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" id="fit-tab" data-toggle="tab" href="#fit" role="tab" aria-controls="fit" aria-selected="false">Fit</a>
               </li>
             </ul>
             <div class="tab-content" id="myTabContent">
-              <div class="tab-pane fade show active" id="main" role="tabpanel" aria-labelledby="main-tab">
+              <div class="tab-pane fade show active" id="prospect" role="tabpanel" aria-labelledby="prospect-tab">
+                  {{ bokeh_divs['prospect']|safe }}
+              </div>
+              <div class="tab-pane fade" id="icats" role="tabpanel" aria-labelledby="icats-tab">
                   {{ bokeh_divs['icats']|safe }}
               </div>
               <div class="tab-pane fade" id="table" role="tabpanel" aria-labelledby="table-tab">
@@ -35,9 +41,9 @@
                   {{ bokeh_divs['table']|safe }}
                   </div>
               </div>
-              <div class="tab-pane fade" id="scatter" role="tabpanel" aria-labelledby="scatter-tab">
+              <div class="tab-pane fade" id="fit" role="tabpanel" aria-labelledby="fit-tab">
                   <div style="overflow:scroll">
-                  {{ bokeh_divs['scatter']|safe }}
+                  {{ bokeh_divs['fit']|safe }}
                   </div>
               </div>
             </div>
