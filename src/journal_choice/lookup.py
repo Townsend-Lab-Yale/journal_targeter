@@ -7,16 +7,19 @@ import bs4
 import requests
 import numpy as np
 import pandas as pd
+import zeep
 
 import logging
 logging.basicConfig(format='%(levelname)s: %(message)s',  # %(asctime)-15s
                     level=logging.INFO, stream=sys.stdout)
 
 JANE_URL = "https://jane.biosemantics.org/suggestions.php"
+WSDL_URL = "http://jane.biosemantics.org:8080/JaneServer/services/JaneSOAPServer?wsdl"
+CLIENT = zeep.Client(WSDL_URL)
 
 
 def lookup_jane(text=None):
-    """Get journals and articles associated with query text.
+    """Get journals and articles tables from Jane search inc computed stats.
 
     Args:
         text (str): Title or abstract text for Jane lookup.
@@ -27,6 +30,85 @@ def lookup_jane(text=None):
     """
     if text is None:
         raise TypeError("Query text is required for Jane search.")
+
+    journals, articles = fetch_jane_results_via_api(text=text)
+
+    # Get some aggregated journal/article info into journals table
+    n_articles = articles.groupby('j_rank').size()
+    sim_sum = articles.groupby('j_rank')['sim'].sum()
+    sim_max = articles.groupby('j_rank')['sim'].max()
+    sim_min = articles.groupby('j_rank')['sim'].min()
+    sims = articles.groupby('j_rank')['sim'].apply(lambda s: '|'.join([str(i) for i in s]))
+    meta = pd.concat([n_articles, sim_sum, sim_max, sim_min, sims], axis=1)
+    meta.columns = ['n_articles', 'sim_sum', 'sim_max', 'sim_min', 'sims']
+    journals = pd.concat([journals, meta], axis=1)
+    col_order = ['journal_name', 'influence', 'n_articles', 'sim_sum', 'sim_max', 'pc_lower']
+    col_order += [i for i in journals.columns if i not in col_order]
+    journals = journals[col_order].rename(columns={'journal_name': 'jane_name'})
+    return journals, articles
+
+
+def fetch_jane_results_via_api(text=None):
+    """Get journal and article results via HTML scraping.
+
+        Args:
+            text (str): Title or abstract text for Jane lookup.
+
+        Returns:
+            journals (pd.DataFrame): table of journals, ordered by rank
+            articles (pd.DataFrame): table of articles, includes journal rank column.
+    """
+    res = CLIENT.service.getJournals(text=text)
+
+    # JOURNALS
+    records = []
+    for j in res:
+        rec = dict()
+        rec['journal_name'] = j['name']
+        rec['confidence'] = j['score'] * 100  # type: float
+        rec['is_oa'] = j['openAccess'] == 'true'
+        rec['jane_abbr'] = j['journalAbbr']
+        rec['jane_issn'] = j['issn']
+        rec['in_medline'] = j['medlineIndexed'] == 'true'
+        rec['influence'] = np.nan if j['ai'] == '-1' \
+            else 0.05 if j['ai'] == '<0.1' \
+            else float(j['ai'])
+        rec['pc_lower'] = int(j['airank']) if j['airank'] is not None else np.nan
+        rec['pmc_months'] = int(j['pmcMonths'])
+        rec['in_pmc'] = rec['pmc_months'] > -1
+        rec['tags'] = _assemble_tags_for_api(rec)
+        records.append(rec)
+    journals = pd.DataFrame.from_records(records)
+    journals.index.name = 'j_rank'
+
+    # ARTICLES
+    records = []
+    for j_rank, j in enumerate(res):
+        papers = j['papers']
+        for article in papers:
+            rec = dict()
+            rec['j_rank'] = j_rank
+            rec['sim'] = article.score * 100
+            rec['authors'] = ','.join(article.authors)
+            rec['a_id'] = f'PMID_{article.pmid}'
+            rec['title'] = article.title
+            rec['year'] = article.year
+            rec['url'] = f"https://pubmed.ncbi.nlm.nih.gov/{article.pmid}"
+            records.append(rec)
+    articles = pd.DataFrame.from_records(records)
+    return journals, articles
+
+
+def fetch_jane_results_via_scrape(text=None):
+    """Get journal and article results via HTML scraping.
+
+        Args:
+            text (str): Title or abstract text for Jane lookup.
+
+        Returns:
+            journals (pd.DataFrame): table of journals, ordered by rank
+            articles (pd.DataFrame): table of articles, includes journal rank column.
+    """
     form_dict = {'text': text,
                  'languageCount': 7,
                  'typeCount': 19,
@@ -107,17 +189,21 @@ def lookup_jane(text=None):
             a_list.append(a_dict)
     articles = pd.DataFrame(a_list)
     articles['sim'] = articles['sim'].astype(int)
-
-    # Get some aggregated journal/article info into journals table
-    n_articles = articles.groupby('j_rank').size()
-    sim_sum = articles.groupby('j_rank')['sim'].sum()
-    sim_max = articles.groupby('j_rank')['sim'].max()
-    sim_min = articles.groupby('j_rank')['sim'].min()
-    sims = articles.groupby('j_rank')['sim'].apply(lambda s: '|'.join([str(i) for i in s]))
-    meta = pd.concat([n_articles, sim_sum, sim_max, sim_min, sims], axis=1)
-    meta.columns = ['n_articles', 'sim_sum', 'sim_max', 'sim_min', 'sims']
-    journals = pd.concat([journals, meta], axis=1)
-    col_order = ['journal_name', 'influence', 'n_articles', 'sim_sum', 'sim_max', 'pc_lower']
-    col_order += [i for i in journals.columns if i not in col_order]
-    journals = journals[col_order].rename(columns={'journal_name': 'jane_name'})
     return journals, articles
+
+
+def _assemble_tags_for_api(record):
+    """Get helpful 'tags' string for journal info from API, mimicking Jane tags.
+    >>> _assemble_tags_for_api({'is_oa': True, 'in_pmc': True, 'in_medline': False})
+    'open access | PMC'
+    >>> _assemble_tags_for_api({'is_oa': True, 'in_pmc': True, 'in_medline': True})
+    'open access | medline-indexed | PMC'
+    """
+    vals = []
+    if record['is_oa']:
+        vals.append('open access')
+    if record['in_medline']:
+        vals.append('medline-indexed')
+    if record['in_pmc']:
+        vals.append('PMC')
+    return ' | '.join(vals)

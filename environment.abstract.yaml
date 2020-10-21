@@ -33,8 +33,10 @@ dependencies:
   - line_profiler
   - yaml
   - gunicorn
+  - sphinx
   - pip:
       - iso4
       - RISparser
       - bootstrap-flask
       - Flask-Session
+      - pytest-check

@@ -84,7 +84,7 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
     return j, a, jf, af, refs_df
 
 
-def aggregate_journals_articles(j, a):
+def aggregate_journals_articles(j, a, from_api=True):
     """Build jf, af tables from tall-form journals and articles tables.
 
     Returns:
@@ -96,6 +96,8 @@ def aggregate_journals_articles(j, a):
     groupby_col = 'jid'
     get_first = ['journal_name', 'citescore', 'influence', 'tags', 'abbr',
                  'cited', 'uid', 'scopus_id', 'single_match', 'is_oa']
+    if from_api:
+        get_first.extend(['in_medline', 'in_pmc'])
     get_sum = ['n_articles', 'sim_sum', 'conf_sum']
     get_max = ['sim_max']
     get_min = ['sim_min']
@@ -118,10 +120,15 @@ def aggregate_journals_articles(j, a):
     jf['n_unique'] = n_unique
     jf['conf_pc'] = jf['conf_sum'] / jf['conf_sum'].sum() * 100
     jf['cites+hits'] = jf['cited'] + jf['n_unique']
-    jf['tags'] = jf['tags'].fillna('')
-    jf['is_open'] = jf['tags'].map(lambda v: '\u2714' if 'open' in v else '')
-    jf['in_medline'] = jf['tags'].map(lambda v: '\u2714' if 'Medline' in v else '')
-    jf['in_pmc'] = jf['tags'].map(lambda v: '\u2714' if 'PMC' in v else '')
+    if not from_api:
+        jf['tags'] = jf['tags'].fillna('')
+        jf['is_open'] = jf['tags'].map(lambda v: '\u2714' if 'open' in v else '')
+        jf['in_medline'] = jf['tags'].map(lambda v: '\u2714' if 'Medline' in v else '')
+        jf['in_pmc'] = jf['tags'].map(lambda v: '\u2714' if 'PMC' in v else '')
+    else:
+        jf['is_open'] = jf['is_oa'].map(lambda v: '\u2714' if v else '')
+        jf['in_medline'] = jf['in_medline'].map(lambda v: '\u2714' if v else '')
+        jf['in_pmc'] = jf['in_pmc'].map(lambda v: '\u2714' if v else '')
     jf['conf_title'] = jf['confidence'].map(partial(_get_categ_confidence, categ='title'))
     jf['conf_abstract'] = jf['confidence'].map(partial(_get_categ_confidence, categ='abstract'))
     jf['initials'] = jf.abbr.apply(_get_initials)
@@ -183,11 +190,11 @@ def _get_categ_confidence(conf_str, categ):
 
     Examples:
         >>> _get_categ_confidence('title:2 abstract:12', 'abstract')
-        12
+        '12'
         >>> _get_categ_confidence('abstract:12', 'title')
         ''
     """
-    match = re.search(f'{categ}:(\d+)', conf_str)
+    match = re.search(fr'{categ}:(\d+)', conf_str)
     return match.groups()[0] if match else ''
 
 
