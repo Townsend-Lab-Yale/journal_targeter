@@ -7,6 +7,9 @@ import os
 import sys
 import logging
 
+import click
+
+
 # LOGGING
 LOG_LEVEL = getattr(logging, os.environ.get('LOG_LEVEL', 'INFO').upper())
 logging.basicConfig(format='%(levelname)s: %(message)s',  # %(asctime)-15s
@@ -41,3 +44,11 @@ def develop():
     use_env = '.env.dev'
     shutil.copy(use_env, '.env')
     print(f"Copied from {use_env} to .env")
+
+
+@app.cli.command()
+@click.argument("yaml_path")
+@click.option("--prefix", help="Name prefix for demo data, e.g. lung.")
+def demo(yaml_path, prefix=None):
+    from .demo import create_demo_data_from_yaml
+    create_demo_data_from_yaml(yaml_path, prefix=prefix)

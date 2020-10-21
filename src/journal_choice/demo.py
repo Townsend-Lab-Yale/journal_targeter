@@ -2,6 +2,8 @@ import os
 import sys
 import yaml
 import pickle
+import pprint
+import shutil
 import logging
 import unicodedata
 
@@ -68,6 +70,29 @@ def create_demo_data(title=None, abstract=None, ris_name=None,
     _build_demo_pickle(yaml_filename)
 
 
+def create_demo_data_from_yaml(yaml_path, prefix=None):
+    """Use yaml file with title, abstract, ris_name to create demo example."""
+    with open(yaml_path, 'r') as infile:
+        demo_dict = yaml.load(infile, yaml.SafeLoader)
+    _logger.info(f"Inputs:\n{pprint.pformat(demo_dict)}.")
+    assert set(demo_dict.keys()) == {'title', 'abstract', 'ris_name'}, \
+        "Keys must be title, abstract, ris_name"
+    abs_path = os.path.abspath(yaml_path)
+    parent_dir, yaml_basename = os.path.split(abs_path)
+    ris_name = demo_dict['ris_name']
+    ris_path = os.path.join(parent_dir, ris_name)
+    dest_ris_path = os.path.join(DEMO_DIR, ris_name)
+    if os.path.exists(dest_ris_path):
+        _logger.info("Using existing ris file in demo directory")
+    else:
+        shutil.copy2(ris_path, dest_ris_path)
+        _logger.info("Copied ris path to demo directory.")
+    if prefix is None:
+        prefix = os.path.splitext(yaml_basename)[0]
+    _logger.info(f"Using prefix '{prefix}'.")
+    create_demo_data(file_prefix=prefix, **demo_dict)
+
+
 def _build_demo_pickle(yaml_filename):
     """Build dataframes of Jane title+abstract lookups and reference parsing.
 
@@ -113,7 +138,7 @@ def _build_demo_pickle(yaml_filename):
 
 def _save_inputs_yaml(title=None, abstract=None, ris_name=None,
                       yaml_filename=None):
-    """Build dataframes of Jane title+abstract lookups and reference parsing.
+    """Save reference inputs to YAML file in demo directory.
 
     Args:
         title (str): Title query.

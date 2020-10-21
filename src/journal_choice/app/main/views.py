@@ -39,18 +39,17 @@ def index():
 
 
 @main.route('/demo', methods=['GET', 'POST'])
-def demo():
-    demo_prefix = os.environ.get('DEMO_PREFIX')
-
+@main.route('/demo/<demo_prefix>', methods=['GET', 'POST'])
+def demo(demo_prefix=None):
+    if demo_prefix is None:
+        demo_prefix = os.environ.get('DEMO_PREFIX')
     # Temporary demo update process
     force_update = (os.environ.get('FORCE_DEMO_UPDATE', 'false').lower()
                     in ['true', '1'])
     if force_update:
         from ...demo import update_demo_plot
-        update_demo_plot('sars')
-
+        update_demo_plot(demo_prefix)
     data = get_demo_data(demo_prefix)
-
     return render_template('index.html',
                            query_title=data['title'],
                            query_abstract=data['abstract'],
