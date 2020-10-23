@@ -8,6 +8,8 @@ import sys
 import logging
 
 import click
+from flask import render_template
+from flask.cli import with_appcontext
 
 
 # LOGGING
@@ -24,6 +26,41 @@ if not os.getenv('FLASK_CONFIG', ''):
 from .app import create_app
 
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
+
+
+@app.cli.command('match')
+@click.option('-y', '--yaml', 'query_yaml',
+                required=True, type=click.Path(exists=True),
+                help='Path to YAML file with title and abstract fields.')
+@click.option('-r', '--ris', 'ris_path', type=click.Path(exists=True),
+                help='Path to references file in RIS format.')
+@click.option('-o', '--out_basename', default='out')
+def match(query_yaml=None, ris_path=None, out_basename=None):
+    from .mapping import run_queries
+    from .plot import get_bokeh_components
+    from .helpers import get_queries_from_yaml
+    query_dict = get_queries_from_yaml(query_yaml)
+    query_title = query_dict['title']
+    query_abstract = query_dict['abstract']
+    j, a, jf, af, refs_df = run_queries(query_title=query_title,
+                                        query_abstract=query_abstract,
+                                        ris_path=ris_path)
+    js, divs = get_bokeh_components(jf, af, refs_df)
+    ris_name = os.path.basename(ris_path)
+    with app.app_context():
+        html = render_template('index.html',
+                               standalone=True,
+                               query_title=query_title,
+                               query_abstract=query_abstract,
+                               query_ris=ris_name,
+                               bokeh_js=js,
+                               bokeh_divs=divs,
+                               )
+    basename_safe = out_basename.replace(os.path.sep, '')
+    out_path = f"{basename_safe}.html"
+    with open(out_path, 'w') as out:
+        out.write(html)
+    print(f"Results written to {out_path}.")
 
 
 @app.cli.command()

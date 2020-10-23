@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% if not standalone %}{% extends "base.html" %}{% else %}{% extends "base_standalone.html" %}{% endif %}
 
 {% block page_content %}
 

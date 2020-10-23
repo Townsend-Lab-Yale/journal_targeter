@@ -1,3 +1,4 @@
+import os
 import re
 import logging
 import unicodedata
@@ -5,6 +6,8 @@ from itertools import zip_longest
 
 import numpy as np
 import pandas as pd
+import pprint
+import yaml
 
 
 _logger = logging.getLogger(__name__)
@@ -109,3 +112,12 @@ def not_nan(val):
     return False
 
 
+def get_queries_from_yaml(yaml_path):
+    if not os.path.exists(yaml_path):
+        raise FileNotFoundError('Invalid query YAML path.')
+    with open(yaml_path, 'r') as infile:
+        query_dict = yaml.load(infile, yaml.SafeLoader)
+    _logger.info(f"Inputs:\n{pprint.pformat(query_dict)}.")
+    assert not {'title', 'abstract'}.difference(set(query_dict.keys())), \
+        "Keys must be title, abstract"
+    return query_dict
