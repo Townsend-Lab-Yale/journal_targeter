@@ -1,5 +1,4 @@
 """Data consolidation."""
-import os
 import re
 import json
 import logging
@@ -88,7 +87,7 @@ def aggregate_journals_articles(j, a, from_api=True):
     """Build jf, af tables from tall-form journals and articles tables.
 
     Returns:
-        jf, af.
+        jf (one row per journal), af (one row per article).
     """
     # JF: AGGREGATE JOURNAL TITLE+ABSTRACT RESULTS
     temp = j.copy()
@@ -148,7 +147,7 @@ def aggregate_journals_articles(j, a, from_api=True):
     for impact_col in ['citescore', 'influence']:
         jf[f'p_{impact_col}'] = jf['CAT'] / (jf['CAT'] + jf[impact_col])
 
-    jf = jf.sort_values(['CAT', 'conf_pc'], ascending=False).reset_index()
+    jf = jf.sort_values(['CAT', 'sim_sum'], ascending=False).reset_index()
 
     af['abbr'] = af['jid'].map(jf.set_index('jid')['abbr'])
     af['PMID'] = af['a_id'].str[5:]
