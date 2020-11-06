@@ -5,6 +5,7 @@ import logging
 from functools import partial
 from collections import defaultdict, OrderedDict
 
+import numpy as np
 import pandas as pd
 
 from . import scopus, DATA_DIR
@@ -12,7 +13,7 @@ from .pubmed import TM, MATCH_JSON_PATH, MATCH_PICKLE_PATH
 from .scopus import SCOP
 from .ref_loading import identify_user_references
 from .lookup import lookup_jane
-
+from .helpers import get_issn_comb
 
 _logger = logging.getLogger(__name__)
 
@@ -267,6 +268,141 @@ def _get_agg_record_for_field_list(group_df, index_name, index_value, field_list
     return out
 
 
+def _coerce_issn_to_numeric_string(issn):
+    """
+    >>> _coerce_issn_to_numeric_string('123-45678')
+    '12345678'
+    >>> _coerce_issn_to_numeric_string('004-4586X')
+    '0044586X'
+    >>> _coerce_issn_to_numeric_string('***-*****')
+    ''
+    """
+    if pd.isnull(issn):
+        return np.nan
+    assert(type(issn) is str), "ISSN must be a string."
+    issn = ''.join([i for i in issn if i.isnumeric() or i == 'X'])
+    return issn
+
+
+def _get_query_table(titles=None, issn_print=None, issn_online=None):
+    """
+
+    Args:
+        titles:
+        issn_print:
+        issn_online:
+
+    Returns:
+
+    """
+    # BUILD QUERY DATAFRAME
+    if titles is None or issn_print is None:
+        raise ValueError("titles and issn_print are required.")
+    issn_print = [_coerce_issn_to_numeric_string(i) for i in issn_print]
+    data = {'title': list(titles), 'issn_print': issn_print}
+    has_issn_online = issn_online is not None
+    if has_issn_online:
+        issn_online = [_coerce_issn_to_numeric_string(i) for i in issn_online]
+        data.update({'issn_online': issn_online})
+        issn_comb = get_issn_comb(pd.Series(issn_print), pd.Series(issn_online))
+        data.update({'issn_comb': issn_comb})
+    df = pd.DataFrame(data)
+    return df
+
+
+def lookup_uids_from_title_issn(titles=None,
+                                issn_print=None,
+                                issn_online=None,
+                                n_processes=1):
+    """Look up NLM UIDs using journal names and ISSNs, if provided.
+
+    Matching priority: ISSN print+online > ISSN print > ISSN online > title.
+
+    Args:
+        titles (iterable): journal names to be matched.
+        issn_print (iterable): OPTIONAL print or generic ISSN iterable.
+        issn_online (iterable): OPTIONAL online ISSN / e-ISSN iterable.
+        n_processes (int): number of processes. Use mutiprocessing if >1.
+    Returns:
+        match (pd.DataFrame), including `input_title`, `uid`, and other matching
+        metadata columns. Discrepant UIDs from multiple sources are indicated by
+        `n_vals` > 1, with sources separated by '|'.
+    """
+
+    match = TM.match_titles(list(titles), n_processes=n_processes)
+    match.rename(columns={
+        'uid': 'on_name',
+        'categ': 'name_method',
+        'single_match': 'on_name_single',
+    }, inplace=True)
+    match['bool_name'] = match.name_method != 'unmatched'
+    if issn_print is None:
+        # NO ISSN DATA, SO RETURN MATCHES
+        match['uid'] = match.on_name.where(match.on_name_single, np.nan)
+        return match
+
+    # ISSN reference for print and online
+    pm = TM.pm
+    pm_issnp1 = pm.issn_print.dropna().drop_duplicates(keep=False).reset_index()  # print issn uniquely points to uid
+    pm_issno1 = pm.issn_online.dropna().drop_duplicates(keep=False).reset_index()  # online issn uniquely points to uid
+
+    # ISSN MATCHING
+    df = _get_query_table(titles=titles, issn_print=issn_print, issn_online=issn_online)
+    has_comb_issn = 'issn_comb' in df.columns
+    if has_comb_issn:
+        # issn_comb matching useful when issnp repeated but issnp+issno seen once
+        pm_issn_comb1 = pm.loc[pm.is_active, 'issn_comb'].drop_duplicates(keep=False).reset_index()
+        # skip repeated issn_comb pairs in query table
+        df_issn_comb = df['issn_comb'].drop_duplicates(keep=False).reset_index()
+        issnc = pm_issn_comb1.merge(df_issn_comb, how='inner', on='issn_comb') \
+            .set_index('index')['uid']
+        match['on_issnc'] = issnc
+        # Add Print ISSN matching info
+        df_issnp = df['issn_print'].dropna().drop_duplicates(keep=False).reset_index()
+        issnp = pm_issnp1.merge(df_issnp, how='inner', on='issn_print').set_index('index')['uid']
+        match['on_issnp'] = issnp
+        # Add Online ISSN matching info
+        df_issno = df['issn_online'].dropna().drop_duplicates(keep=False).reset_index()
+        issno = pm_issno1.merge(df_issno, how='inner', on='issn_online').set_index('index')['uid']
+        match['on_issno'] = issno
+    else:  # single issn provided per title
+        issns = pd.DataFrame({
+            'uid': list(pm_issnp1.uid) + list(pm_issno1.uid),
+            'issn': list(pm_issnp1.issn_print) + list(pm_issno1.issn_online),
+            'categ': list(np.repeat('print', len(pm_issnp1))) + list(np.repeat('online', len(pm_issno1))),
+        })
+        # all issn-uid pairs
+        issns = issns.groupby(['uid', 'issn']).aggregate(lambda s: ','.join(set(s))).reset_index()
+        # remove issns that are in more than one pair
+        ambig_issns = issns.issn.value_counts().loc[lambda v: v > 1].index
+        issns1 = issns[~issns['issn'].isin(ambig_issns)]
+        issn_dict = issns1.set_index('issn')['uid'].to_dict()
+        match['on_issnp'] = df['issn_print'].map(issn_dict)
+
+    # Add boolean columns for ISSN variant matches
+    if has_comb_issn:
+        match['bool_issnc'] = ~match.on_issnc.isnull()
+        match['bool_issno'] = ~match.on_issno.isnull()
+    match['bool_issnp'] = ~match.on_issnp.isnull()
+
+    # Count matches and categorize discrepancies for each scopus ID
+    var_cols = ('issnc', 'issnp', 'issno') if has_comb_issn else ('issnp',)
+    categs = pd.DataFrame.from_records(
+        match.apply(lambda r: _classify_ids(r, cols=var_cols), axis=1).values,
+             columns=['n_vals', 'categ'], index=match.index)
+    match = pd.concat([match, categs], axis=1)
+
+    # Get 'final' UIDs based on ISSN combined > ISSN print > ISSN online > title
+    if has_comb_issn:
+        final = match.on_issnp.where(match.on_issnc.isnull(), match.on_issnc)
+        final = match.on_issno.where(final.isnull(), final)
+    else:
+        final = match.on_issnp
+    final = match.on_name.where(match.on_name_single & final.isnull(), final)
+    match['uid'] = final
+    return match
+
+
 def build_uid_match_table(n_processes=4, write_files=False):
     """Get NLM UIDs for all Scopus journal IDs based on Scopus names and ISSNs.
 
@@ -327,7 +463,7 @@ def build_uid_match_table(n_processes=4, write_files=False):
     return match
 
 
-def _classify_ids(r):
+def _classify_ids(r, cols=('issnc', 'issnp', 'issno')):
     """Count UIDs and create 'category' string to describe sources and discrepancies.
 
     A vertical bar (|) separates discrepant sources of UID.
@@ -339,7 +475,7 @@ def _classify_ids(r):
     if r.on_name_single:
         vals.add(r.on_name)
         d['title'] = r.on_name
-    for var in ['issnc', 'issnp', 'issno']:
+    for var in cols:
         bool_col, id_col = f"bool_{var}", f"on_{var}"
         if r[bool_col]:
             vals.add(r[id_col])
