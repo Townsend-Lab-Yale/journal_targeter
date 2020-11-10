@@ -49,8 +49,15 @@ class HTTPError414(Exception):
 
 
 class TitleMatcher:
-    def __init__(self, pm=None):
-        """Match user journal title to PubMed journal data."""
+    def __init__(self, pm=None, use_pickle=True):
+        """Match user journal title to PubMed journal data.
+
+        Args:
+            pm: PubMed reference data table, via e.g. load_pubmed_journals.
+        """
+        if pm is not None and use_pickle:
+            raise ValueError("Specify pm or use_pickle, not both.")
+
         self.pm = None
         self.titles = None
         self.safe_abbrv_uid_dict = None
@@ -60,12 +67,12 @@ class TitleMatcher:
         self.alt_safe_uid_dict = None
         self.abbrv_uid_dict = None
 
-        if os.path.exists(TM_PICKLE_PATH):
+        if use_pickle and os.path.exists(TM_PICKLE_PATH):
             _logger.info('loading from TM pickle')
             self._init_from_pickle()
         else:
             if pm is None:
-                _logger.info('no TM pickle, no pm provided')
+                _logger.info('No TM pickle, no pm provided: building pm from scratch.')
                 pm = load_pubmed_journals(refresh=False)
             self._init_from_pm(pm)
 
@@ -241,8 +248,11 @@ class TitleMatcher:
 
 
 def load_pubmed_journals(refresh=False):
-    """Load table of PubMed journals. Reload from NCBI if refresh is True."""
-    if refresh:
+    """Load table of PubMed journals.
+
+    Reload source from NCBI if refresh is True or file doesn't exist.
+    """
+    if refresh or not os.path.exists(JOURNALS_PATH):
         refresh_pubmed_reference()
     pm = pd.DataFrame.from_records(_yield_records(JOURNALS_PATH))
     pm['isoabbr_nodots'] = pm['IsoAbbr'].str.replace('.', '')
