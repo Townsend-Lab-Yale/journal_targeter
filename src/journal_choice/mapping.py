@@ -8,9 +8,8 @@ from collections import defaultdict, OrderedDict
 import numpy as np
 import pandas as pd
 
-from . import scopus, DATA_DIR
+from . import metrics
 from .pubmed import TM, MATCH_JSON_PATH, MATCH_PICKLE_PATH
-from .scopus import SCOP
 from .ref_loading import identify_user_references
 from .lookup import lookup_jane
 from .helpers import get_issn_comb
@@ -94,8 +93,9 @@ def aggregate_journals_articles(j, a, from_api=True):
     temp = j.copy()
     temp['conf_sum'] = temp['confidence']  # placeholder for conf sum aggregation
     groupby_col = 'jid'
-    get_first = ['journal_name', 'citescore', 'influence', 'tags', 'abbr',
-                 'cited', 'uid', 'scopus_id', 'single_match', 'is_oa']
+    get_first = ['journal_name', 'tags', 'abbr',
+                 'cited', 'uid', 'single_match', 'is_oa']
+    get_first += list(metrics.METRIC_NAMES)
     if from_api:
         get_first.extend(['in_medline', 'in_pmc'])
     get_sum = ['n_articles', 'sim_sum', 'conf_sum']
@@ -145,7 +145,7 @@ def aggregate_journals_articles(j, a, from_api=True):
                                      'in_both': 'both'})
     jf = jf.join(n_articles, on='jid', how='left')
     jf['CAT'] = jf['cited'] + jf['abstract'] + jf['title']
-    for impact_col in ['citescore', 'influence']:
+    for impact_col in metrics.METRIC_NAMES:
         jf[f'p_{impact_col}'] = jf['CAT'] / (jf['CAT'] + jf[impact_col])
 
     jf = jf.sort_values(['CAT', 'sim_sum'], ascending=False).reset_index()
@@ -176,12 +176,14 @@ def process_inputs(input_text=None, ris_path=None, use_title=True, refs_df=None)
     n_cites_dict = refs_df.groupby('uid').size().to_dict()
     journals['cited'] = journals['uid'].map(n_cites_dict).fillna(0).astype(int)
 
-    # Add citescore
-    journals = journals.join(TM.pm[['main_title', 'scopus_id']], how='left', on='uid') \
-        .join(SCOP[['journal_name', 'citescore']], how='left', on='scopus_id')
-    # Prioritize scopus name, then jane_name if null
-    journals['journal_name'] = journals.journal_name.where(~journals.journal_name.isnull(),
-                                                           journals.jane_name)
+    # Add metrics
+    use_pm_cols = ['main_title'] + [i for i in metrics.METRIC_NAMES if i != 'influence']
+    journals = journals.join(TM.pm[use_pm_cols], how='left', on='uid')
+    # # Prioritize main_title name, but use jane_name if shorter
+    use_jane = journals['jane_name'].map(len) < journals['main_title'].map(
+        lambda v: len(v) if type(v) is str else np.inf)
+    journals['journal_name'] = journals['jane_name']\
+        .where(use_jane, journals['main_title'])
     return journals, articles, refs_df
 
 
@@ -411,6 +413,7 @@ def build_uid_match_table(n_processes=4, write_files=False):
         write_files (bool): write match table to pickle and json in DATA dir.
     """
     pm = TM.pm
+    from . import scopus
     scop = scopus.load_scopus_journals_reduced()
     # Attempt match on Scopus journal titles
     titles = scop.journal_name.values
