@@ -246,7 +246,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     if 'citescore' in METRIC_NAMES:
         metric_dict['citescore_table'] = ('CiteScore', w_md)
     metric_dict['influence_table'] = ('Inf', w_sm)
-    col_param_dict = OrderedDict({'journal_name': ('journal', w_journal)})
+    col_param_dict = OrderedDict({'journal_name': ('Journal', w_journal)})
     col_param_dict.update(metric_dict)
     col_param_dict.update({
         'is_open': ('OA', w_sm),
@@ -261,7 +261,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
         'cited': ('C', w_xs),
         'abstract': ('A', w_xs),
         'title': ('T', w_xs),
-        'both': ('T&A', w_xs),
+        'both': ('A&T', w_xs),
     })
     index_width = 0  # setting index_position to None
     table_width = sum([i[1] for i in col_param_dict.values()]) + index_width
@@ -270,7 +270,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     # url_template = """<a href="<%= value %>" target="_blank"><%= value %></a>"""
     col_names = {col: col_param_dict[col][0] for col in col_param_dict}
     format_dict = {
-        'journal': bkm.widgets.HTMLTemplateFormatter(template=cell_template),
+        'Journal': bkm.widgets.HTMLTemplateFormatter(template=cell_template),
         'OA': bkm.widgets.StringFormatter(),
         'ML': bkm.widgets.StringFormatter(),
         'PMC': bkm.widgets.StringFormatter(),
@@ -289,10 +289,13 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
         columns.append(bkm.widgets.TableColumn(
             field=col, title=col_param_dict[col][0],
             **table_cols[col]))
-
+    n_journals = len(source_j.data['index'])
+    row_height = 25  # pixels
+    table_height = (n_journals + 1) * row_height  # add 1 for header
     data_table = bkm.widgets.DataTable(source=source_j, columns=columns,
-                                       width=table_width, index_position=None,
-                                       fit_columns=False,
+                                       width=table_width, height=table_height,
+                                       row_height=row_height,
+                                       index_position=None, fit_columns=False,
                                        **table_kws)
     if show_plot:
         bkio.show(data_table)
@@ -358,8 +361,38 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     p_l = bkp.figure(tools=TOOLS,
                      x_range=(impact_max, 0), y_range=p.y_range,
                      plot_width=width_l, plot_height=plot_height,
-                     x_axis_label='Impact', x_axis_location="above")
-    r_i = p_l.hbar(y='jid', height=0.4, left=0, right='citescore', source=source_j)
+                     x_axis_label=METRIC_NAMES[_DEFAULT_IMPACT], x_axis_location="above")
+    r_i = p_l.hbar(y='jid', height=0.4, left=0, right='ax_impact', source=source_j)
+
+    # WIDGETS
+    option_dict = {METRIC_NAMES[i]: i for i in METRIC_NAMES}
+    default_metric_label = METRIC_NAMES[_DEFAULT_IMPACT]
+    select_kws = dict(width=150, width_policy='fixed', margin=(5, 5, 5, 45))
+    select1 = bkm.widgets.Select(title="Impact metric:",
+                                 value=default_metric_label,
+                                 options=list(option_dict),
+                                 **select_kws)
+
+    impact_js = """const option = select.value;
+            const option_dict = %s;
+            const new_data = Object.assign({}, source.data);
+            const impact_vals = source.data[option_dict[option]];
+            var max_impact = 0;
+            for (var i = 0; i < impact_vals.length; i++) {
+                if (impact_vals[i] > max_impact){
+                    max_impact = impact_vals[i];
+                }
+            }
+            new_data.ax_impact = impact_vals;
+            ax[0].axis_label = option;
+            xrange.start = max_impact;
+            source.data = new_data;
+            """ % option_dict
+
+    select1.js_on_change('value', bkm.callbacks.CustomJS(
+        args=dict(select=select1, xrange=p_l.x_range, ax=p_l.xaxis, source=source_j),
+        code=impact_js))
+
 
     # RIGHT HAND SIDE: SCATTER AND WHISKER
     p_r = bkp.figure(
@@ -413,7 +446,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     p_l.yaxis.visible = False
     p.yaxis.visible = False
 
-    grid = bkl.gridplot([[p_l, p, p_r]], toolbar_location='left')
+    grid = bkl.gridplot([[select1], [p_l, p, p_r]], toolbar_location='left')
 
     if show_plot:
         bkp.show(grid)
