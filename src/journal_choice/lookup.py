@@ -15,7 +15,27 @@ logging.basicConfig(format='%(levelname)s: %(message)s',  # %(asctime)-15s
 
 JANE_URL = "https://jane.biosemantics.org/suggestions.php"
 WSDL_URL = "http://jane.biosemantics.org:8080/JaneServer/services/JaneSOAPServer?wsdl"
-CLIENT = zeep.Client(WSDL_URL)
+_logger = logging.getLogger(__name__)
+
+
+class ApiClient:
+
+    def __init__(self):
+        self.url = WSDL_URL
+        self._client = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            _logger.info("Creating Jane API client connection.")
+            self._client = zeep.Client(WSDL_URL)
+        return self._client
+
+    def get_journal_results(self, query_text):
+        return self.client.service.getJournals(text=query_text)
+
+
+CLIENT = ApiClient()
 
 
 def lookup_jane(text=None):
@@ -58,7 +78,7 @@ def fetch_jane_results_via_api(text=None):
             journals (pd.DataFrame): table of journals, ordered by rank
             articles (pd.DataFrame): table of articles, includes journal rank column.
     """
-    res = CLIENT.service.getJournals(text=text)
+    res = CLIENT.get_journal_results(query_text=text)
 
     # JOURNALS
     records = []
