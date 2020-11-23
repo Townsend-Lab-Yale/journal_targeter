@@ -2,21 +2,11 @@
 
 {% block page_content %}
 
-    <div id="intro">
-        <p class="mb-0">Journals with similar articles are shown below.</p>
-        <ul>
-            <li>Hover over the plot to see corresponding journal and article information.</li>
-            <li>Click through the tabs to see different views of the data.</li>
-        </ul>
-    </div>
-
-
-
     <div class="row ">
-        <div class="col-lg-9 bokeh order-2 order-xl-1 ">
+        <div class="col-lg-9 bokeh order-2 order-xl-2 ">
             <ul class="nav nav-tabs" id="myTab" role="tablist">
               <li class="nav-item">
-                <a class="nav-link active" id="prospect-tab" data-toggle="tab" href="#prospect" role="tab" aria-controls="prospect" aria-selected="true">Prospect</a>
+                <a class="nav-link active" id="prospect-tab" data-toggle="tab" href="#prospect" role="tab" aria-controls="prospect" aria-selected="false">Prospect</a>
               </li>
               <li class="nav-item">
                 <a class="nav-link" id="icats-tab" data-toggle="tab" href="#icats" role="tab" aria-controls="icats" aria-selected="false">ICATS</a>
@@ -25,7 +15,7 @@
                 <a class="nav-link" id="table-tab" data-toggle="tab" href="#table" role="tab" aria-controls="datatable" aria-selected="false">Table</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" id="fit-tab" data-toggle="tab" href="#fit" role="tab" aria-controls="fit" aria-selected="false">Fit</a>
+                <a class="nav-link" id="fit-tab" data-toggle="tab" href="#fit" role="tab" aria-controls="fit" aria-selected="true">Fit</a>
               </li>
             </ul>
             <div class="tab-content" id="myTabContent">
@@ -36,7 +26,6 @@
                   {{ bokeh_divs['icats']|safe }}
               </div>
               <div class="tab-pane fade" id="table" role="tabpanel" aria-labelledby="table-tab">
-                  Sort journals by clicking on column headers.
                   <div style="overflow:scroll">
                   {{ bokeh_divs['table']|safe }}
                   </div>
@@ -49,11 +38,108 @@
             </div>
 
         </div>
-        <div class="col-lg-3 order-1 order-xl-2">
-            <div><span class="small text-muted">Your inputs:</span></div>
-            <p class="text-dark font-weight-bold mb-0">{{ query_title }}</p>
-            <p class="text-sm text-justify small font-weight-light">{{ query_abstract }}</p>
-            <p class="text-dark mb-0">References file: {{ query_ris }}</p>
+        <div class="col-lg-3 order-1 order-xl-1 border-right border-light">
+
+          <div id="accordion">
+
+            <div class="card border-light">
+              <div class="card-header" id="tips-header">
+                <h5 class="mb-0">
+                  <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#about-collapse"
+                          aria-expanded="false" aria-controls="tips-collapse">
+                    About
+                  </button>
+                </h5>
+              </div>
+              <div id="about-collapse" class="collapse" aria-labelledby="tips-header" data-parent="#accordion">
+                <div class="card-body">
+                    {% include "_info_jane.html" %}
+                </div>
+              </div>
+            </div>
+
+            <div class="card border-light">
+              <div class="card-header" id="inputs-header">
+                <h5 class="mb-0">
+                  <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#inputs-collapse"
+                          aria-expanded="false" aria-controls="inputs-collapse">
+                    Inputs
+                  </button>
+                </h5>
+              </div>
+              <div id="inputs-collapse" class="collapse" aria-labelledby="inputs-header" data-parent="#accordion">
+                  <div class="card-body">
+                    <div id="input-summary">
+{#                      <div><span class="small text-muted">Your inputs:</span></div>#}
+                      <p class="text-dark font-weight-bold mb-0">{{ query_title }}</p>
+                      <p class="text-sm text-justify small font-weight-light">{{ query_abstract }}</p>
+                      <p class="text-dark mb-0">References file: {{ query_ris }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card border-light">
+                  <div class="card-header" id="tips-header">
+                    <h5 class="mb-0">
+                      <button class="btn btn-link" data-toggle="collapse" data-target="#tips-collapse"
+                              aria-expanded="true" aria-controls="tips-collapse">
+                        Exploring the results
+                      </button>
+                    </h5>
+                  </div>
+                  <div id="tips-collapse" class="collapse show" aria-labelledby="tips-header" data-parent="#accordion">
+                    <div class="card-body">
+
+                      {% include '_info_summary.html' %}
+
+                      <h6 id="info-prospect-header">
+                        1. <a class="collapsed" data-toggle="collapse" href="#info-prospect-collapse"
+                                aria-expanded="false" aria-controls="inputs-collapse">
+                          Prospect
+                        </a>
+                      </h6>
+                      <div id="info-prospect-collapse" class="collapse" aria-labelledby="info-prospect-header">
+                        {% include "_info_prospect.html" %}
+                      </div>
+
+                      <h6 id="info-icats-header">
+                        2. <a class="collapsed" data-toggle="collapse" href="#info-icats-collapse"
+                                aria-expanded="false" aria-controls="inputs-collapse">
+                          ICATS
+                        </a>
+                      </h6>
+                      <div id="info-icats-collapse" class="collapse" aria-labelledby="info-icats-header">
+                        {% include "_info_icats.html" %}
+                      </div>
+
+                      <h6 id="info-table-header">
+                        3. <a class="collapsed" data-toggle="collapse" href="#info-table-collapse"
+                                aria-expanded="false" aria-controls="inputs-collapse">
+                          Table
+                        </a>
+                      </h6>
+                      <div id="info-table-collapse" class="collapse" aria-labelledby="info-table-header">
+                        {% include "_info_table.html" %}
+                      </div>
+
+                      <h6 id="info-fit-header">
+                        4. <a class="collapsed" data-toggle="collapse" href="#info-fit-collapse"
+                                aria-expanded="false" aria-controls="inputs-collapse">
+                          Fit
+                        </a>
+                      </h6>
+                      <div id="info-fit-collapse" class="collapse" aria-labelledby="info-fit-header">
+                        {% include "_info_fit.html" %}
+                      </div>
+
+                    </div>
+                  </div>
+              </div>
+
+            </div>
+
+
         </div>
     </div>
 

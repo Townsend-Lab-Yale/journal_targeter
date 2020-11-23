@@ -1,0 +1,32 @@
+{%  filter markdown %}
+
+###### Powered by Jane
+
+Title and abstract text, entered in the [Upload]({{ url_for('main.upload') }}) form,
+    are processed by [**Jane**](https://jane.biosemantics.org/), a.k.a.
+    the "Journal/Author Name Estimator". Jane uses the Lucene search engine to
+    identify 50 articles that most closely match the search text, with each
+    article assigned a similarity score. In the Jane interface, journals are
+    presented in descending order of the sum of similarity scores, as a way of
+    ranking match quality to the input text.
+
+###### Extended journal statistics
+
+This app builds on Jane search results, gathering articles and their similarity scores
+    from separate searches of the title and abstract text. The number of articles
+    matching each journal is used in conjunction with the uploaded references file
+    to produce a `CAT` score: the sum of `C`itations for the journal among the
+    references, and the number of journal articles in the `A`bstract search and
+    `T`itle search. The app presents `CAT` scores, aggregated similarity statistics,
+    and several flavors of journal impact metrics to help inform the choice of
+    suitable target journals for your manuscript.
+
+
+###### Reference
+
+<small>Schuemie, M. J., & Kors, J. A. (2008).
+**Jane: suggesting journals, finding experts**. *Bioinformatics*, 24(5), 727–728.
+doi:[10.1093/bioinformatics/btn006](https://academic.oup.com/bioinformatics/article/24/5/727/202224)
+</small>
+
+{% endfilter %}

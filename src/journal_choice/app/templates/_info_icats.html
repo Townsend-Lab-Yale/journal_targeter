@@ -1,0 +1,18 @@
+{% filter markdown %}
+The `ICATS` plot captures `I`mpact, `C`itation count, `A`bstract match count,
+    `T`itle match count, and `S`imilarity score.
+
+- Journals are ordered by the sum of `C`, `A`, and `T`, then by the sum of
+    similarity scores for articles returned across abstract and title Jane searches.
+- Article similarity scores come from the Lucene search engine used by Jane.
+- The metric used for the Impact bar chart be changed via dropdown.
+    Missing values are indicated with gray bars. Hovel tooltips indicate impact
+    values and journal tags from Jane, including indexing status in Medline
+    and PubMed Central, and open access status.
+- Hovering over Cited / Title / Abstract boxes and the Similarity scatter plot shows
+    the corresponding articles.
+- Markers in the Similarity scatter plot are colored green for articles found in
+    both abstract and title searches. Clicking a marker opens the article page
+    in PubMed.
+
+{% endfilter %}

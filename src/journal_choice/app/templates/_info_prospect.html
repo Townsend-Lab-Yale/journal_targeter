@@ -1,0 +1,38 @@
+{% filter markdown %}
+
+**The `Prospect` metric**
+
+`Prospect` is a crude proxy for 'chance of your manuscript being
+    accepted'. The metric attempts to capture the ratio of 'things in your favor'
+    to 'all considerations, for or against you'. Here, 'things in
+    your favor' include:
+
+- Number of times the journal is cited in your references (`C`).
+- Number of similar articles in the journal returned from a
+    [Jane](https://jane.biosemantics.org/) search* of:
+    1. your abstract text (`A`).
+    2. your title (`T`).
+
+Favorable traits are each given equal weight, so that citing a journal once is
+    as beneficial to your odds as there being one article from the journal that
+    appeared in the Jane abstract search.
+
+Counting against you is the 'impact' (`I`) of the journal, following the assumption
+    that acceptance rate decreases as the impact metric goes up. A weighting
+    factor, `w`, determines how impact is weighed against favorable traits:
+    1 unit of impact counts against you as much as `w` articles count in your favor.
+
+`Prospect` = (`C` + `A` + `T`) / (`C` + `A` + `T` + `wI`)
+
+**Plot features**
+
+The prospect plot lets you:
+
+- change the impact metric,
+- change the impact weight,
+- pan and zoom,
+- load the NLM journal record by tapping a marker,
+- see extended info via hover tooltips,
+- box-select journals to activate in other tabs.
+
+{% endfilter %}

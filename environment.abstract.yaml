@@ -35,6 +35,7 @@ dependencies:
   - gunicorn
   - sphinx
   - zeep
+  - flask-markdown
   - pip:
       - iso4
       - RISparser

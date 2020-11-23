@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_bootstrap import Bootstrap
 from flask_session import Session
+from flaskext.markdown import Markdown
 
 from .config import config
 
@@ -16,6 +17,7 @@ def create_app(config_name):
 
     bootstrap.init_app(app)
     session.init_app(app)
+    Markdown(app)
 
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
