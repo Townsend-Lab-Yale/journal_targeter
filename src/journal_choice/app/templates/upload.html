@@ -9,9 +9,15 @@
 
 {{super()}}
 
-    <h1 class="mt-3">Search inputs</h1>
+    <div class="jumbotron jumbotron-fluid">
+      <div class="container">
+        <h1 class="display-4">Search form</h1>
+        <p class="lead">Enter your title, abstract and references file (in RIS format)
+            to start the matching process.</p>
+      </div>
+    </div>
 
-    <p class="mt-3">Enter your title, abstract and references file (in RIS format) below. </p>
+    <div class="container">
 
 
 {#{% macro render_form(form,    #}
@@ -34,5 +40,7 @@
         extra_classes='text-right',
         button_size='md'
         ) }}
+
+    </div>
 
 {% endblock page_content%}
