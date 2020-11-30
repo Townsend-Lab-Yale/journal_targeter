@@ -94,7 +94,6 @@ def search():
         fs.close()
 
         js, divs = get_bokeh_components(jf, af, refs_df)
-        # pickle_path = get_new_pickle_path(os.environ.get('USER_DATA_DIR'))
         session['bokeh_js'] = js
         session['bokeh_divs'] = divs
         return redirect(url_for('.index'))
