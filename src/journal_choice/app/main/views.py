@@ -16,6 +16,16 @@ _logger = logging.getLogger(__name__)
 
 @main.route('/', methods=['GET', 'POST'])
 def index():
+    # check for populated session
+    has_results = 'bokeh_js' in session
+    title = session.get('title', None)
+    return render_template('home.html',
+                           last_title=title,
+                           )
+
+
+@main.route('/results', methods=['GET', 'POST'])
+def results():
     # check for populated session and matching data pickle
     if 'bokeh_js' not in session:
         flash("Let's start by uploading some data.")

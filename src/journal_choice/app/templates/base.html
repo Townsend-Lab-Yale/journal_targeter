@@ -10,6 +10,7 @@
         {% block styles %}
             <!-- Bootstrap CSS -->
             <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+            <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.1/css/all.css" integrity="sha384-vp86vTRFVJgpjF9jiIGPEEqYqlDwgyBgEF109VFjmqGmIY/Y4HV4d3Gp2irVfcrp" crossorigin="anonymous">
         {% endblock styles %}
 
         <title>{% block title %}{{title|default}}{% endblock title %}</title>
@@ -25,8 +26,8 @@
     ('main.search', 'Search'),
 ] -%}
 
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-  <a class="navbar-brand" href="{{ url_for('main.index') }}">Journals</a>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white">
+  <a class="navbar-brand" href="{{ url_for('main.index') }}">Jot</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
   </button>
@@ -43,8 +44,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-<h1>{{title|default}}</h1>
+
+{% block jumbo %}{% endblock %}
 
 {% for message in get_flashed_messages() %}
 <div class="alert alert-warning">
@@ -54,11 +55,12 @@
 {% endfor %}
 
 {% block page_content %}{% endblock %}
-</div>
 
 {% endblock content%}
 
-        </div>
+{% block footer %}{% endblock %}
+
+
         {% block scripts %}
          <!-- Optional JavaScript -->
         <!-- jQuery first, then Popper.js, then Bootstrap JS -->
