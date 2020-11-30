@@ -67,7 +67,8 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
     plot_width, plot_height = 800, 400
     default_metric_label = METRIC_NAMES[_DEFAULT_IMPACT]
     fig_kws = dict(tools=TOOLS, plot_width=plot_width, plot_height=plot_height,
-                   x_axis_label=default_metric_label, y_axis_label='Prospect')
+                   x_axis_label=default_metric_label, y_axis_label='Prospect',
+                   y_range=(0, 1),)
 
     # IMPACT VS PROSPECT FIGURE (p1)
     p1 = bkp.figure(**fig_kws)
@@ -317,7 +318,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
 
     text_props = {"text_align": "center", "text_baseline": "middle",
                   'text_color': '#000000', 'text_font_size': '10pt'}
-    factors = ['cited', 'title', 'abstract']
+    factors = ['cited', 'abstract', 'title']
     stack_factors = ['cited', 'title_only', 'abstract_only', 'both']
     categ_colors = dict(zip(stack_factors, bk.palettes.Colorblind4))
     categ_hex = {i: get_color_hex(categ_colors[i]) for i in categ_colors}
