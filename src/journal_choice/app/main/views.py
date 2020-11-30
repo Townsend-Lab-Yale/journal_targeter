@@ -19,13 +19,13 @@ def index():
     # check for populated session and matching data pickle
     if 'bokeh_js' not in session:
         flash("Let's start by uploading some data.")
-        return redirect(url_for('.upload'))
+        return redirect(url_for('.search'))
     # Session is populated.
 
     bokeh_js = session['bokeh_js']
     if 'bokeh_divs' not in session:
-        flash("Previous session has expired. Please upload new inputs.")
-        return redirect(url_for('.upload'))
+        flash("Previous session has expired. Please run a new search.")
+        return redirect(url_for('.search'))
     else:
         bokeh_divs = session['bokeh_divs']
 
@@ -59,8 +59,8 @@ def demo(demo_prefix=None):
                            )
 
 
-@main.route('/upload', methods=['GET', 'POST'])
-def upload():
+@main.route('/search', methods=['GET', 'POST'])
+def search():
     form = UploadForm()
     if form.validate_on_submit():
         # flash('Form accepted!')
