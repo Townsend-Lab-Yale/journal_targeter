@@ -247,7 +247,14 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     if 'citescore' in METRIC_NAMES:
         metric_dict['citescore_table'] = ('CiteScore', w_md)
     metric_dict['influence_table'] = ('Inf', w_sm)
-    col_param_dict = OrderedDict({'journal_name': ('Journal', w_journal)})
+    col_param_dict = OrderedDict({
+        'journal_name': ('Journal', w_journal),
+        'CAT': ('CAT', w_sm),
+        'cited': ('C', w_xs),
+        'abstract': ('A', w_xs),
+        'title': ('T', w_xs),
+        'both': ('A&T', w_xs),
+    })
     col_param_dict.update(metric_dict)
     col_param_dict.update({
         'is_open': ('OA', w_sm),
@@ -258,28 +265,29 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
         'conf_pc': ('conf', w_sm),
         'sim_sum': ('∑sim', w_sm),
         'sim_max': ('⤒sim', w_sm),
-        'CAT': ('CAT', w_sm),
-        'cited': ('C', w_xs),
-        'abstract': ('A', w_xs),
-        'title': ('T', w_xs),
-        'both': ('A&T', w_xs),
     })
     index_width = 0  # setting index_position to None
     table_width = sum([i[1] for i in col_param_dict.values()]) + index_width
 
-    cell_template = """<span href="#" data-toggle="tooltip" title="<%= value %>"><%= value %></span>"""
     # url_template = """<a href="<%= value %>" target="_blank"><%= value %></a>"""
     col_names = {col: col_param_dict[col][0] for col in col_param_dict}
     format_dict = {
-        'Journal': bkm.widgets.HTMLTemplateFormatter(template=cell_template),
-        'OA': bkm.widgets.StringFormatter(),
-        'ML': bkm.widgets.StringFormatter(),
-        'PMC': bkm.widgets.StringFormatter(),
+        'journal_name': bkm.widgets.HTMLTemplateFormatter(
+            template=f"""<a href="{_URL_NLM.replace('@uid', '')}<%= uid %>" """
+                     """target="_blank"><i class="fas fa-external-link-alt pr-1"></i></a>"""
+                     """<span class="journal-cell" data-toggle="tooltip" title="<%= value %>">"""
+                     """<%= value %></span>"""),
+        'is_open': bkm.widgets.StringFormatter(),
+        'in_medline': bkm.widgets.StringFormatter(),
+        'in_pmc': bkm.widgets.StringFormatter(),
     }
-    format_dict.update({col_names[i]: bkm.widgets.NumberFormatter(format='0.0') for i in metric_dict})
+    format_dict.update({i: bkm.widgets.HTMLTemplateFormatter(
+        template=f"""<span class="col-metric col-{i} """
+                 """<%= value == -1 ? 'neg-impact' : 'pos-impact' %> "><%= value %></span>""")
+        for i in metric_dict})
     table_cols = OrderedDict({
         col: dict(width=col_param_dict[col][1],
-                  formatter=format_dict.get(col_names[col],
+                  formatter=format_dict.get(col,
                                             bkm.widgets.NumberFormatter(format='0')),
                   **col_kws) for col in col_param_dict})
     # jfp = jf[col_param_dict].rename(columns=col_names)

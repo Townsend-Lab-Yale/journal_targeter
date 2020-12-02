@@ -1,0 +1,54 @@
+.journal-cell{
+    font-weight: bold;
+    color: black;
+}
+
+/*color: #0072B2; !*blue*!*/
+/*color: #F0E442; !*yellow*!*/
+/*color: #E69F00; !*orange*!*/
+/*color: #009E73; !*green*!*/
+.slick-cell:nth-child(2) {  /* CAT */
+    background-color: #84848480;
+}
+.slick-cell.selected:nth-child(2) {  /* CAT */
+    background-color: #848484;
+    color: white;
+}
+
+
+.slick-cell.selected:nth-child(3) {  /* Cited */
+    background-color: #0072b2;
+    color: white;
+}
+.slick-cell:nth-child(3) {  /* Cited */
+    background-color: #0072b280;
+}
+
+.slick-cell.selected:nth-child(4) {  /* Abstract */
+    background-color: #F0E442;
+}
+.slick-cell:nth-child(4) {  /* Abstract */
+    background-color: #F0E44280;
+}
+
+.slick-cell.selected:nth-child(5) {  /* Title */
+    background-color: #E69F00;
+}
+.slick-cell:nth-child(5) {  /* Title */
+    background-color: #E69F0080;
+}
+
+.slick-cell.selected:nth-child(6) {  /* A&T */
+    background-color: #009E73;
+    color: white;
+}
+.slick-cell:nth-child(6) {  /* A&T */
+    background-color: #009E7380;
+}
+
+.neg-impact {
+    color: rgba(0, 0, 0, 0);
+}
+.pos-impact {
+    font-weight: normal;
+}
