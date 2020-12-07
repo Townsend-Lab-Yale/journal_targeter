@@ -321,7 +321,6 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     # if n_journals is None:
     #     n_journals = len(jf)
     width_l, width_m, width_r = 300, 120, 300
-    box_height = 0.95
     TOOLS = "ypan,ywheel_zoom,reset,tap"
 
     text_props = {"text_align": "center", "text_baseline": "middle",
@@ -345,10 +344,10 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     jfs = source_j.to_df()  # temporary dataframe to simplify calculations
     impact_max = jfs[_DEFAULT_IMPACT].max()
     # n_articles_max = jfs[factors].sum(axis=1).max()
-    jname_tuples = [tuple(i) for i in jfs[['jid', 'abbr']].values][::-1]
-    jname_factors2 = bkm.FactorRange(factors=jname_tuples, bounds=(-200, 50),
-                                     factor_padding=0, group_padding=0)
-    jname_factors = jname_factors2  #bkm.FactorRange(factors=[i[0] for i in jname_tuples])
+    factor_dict = _get_journal_factor_dict(jfs)
+    factors_default = [tuple(i) for i in factor_dict['CAT']]
+    jname_factors = bkm.FactorRange(factors=factors_default,  # bounds=(-200, 50),
+                                    factor_padding=0, group_padding=0)
 
     # MIDDLE SQUARES
     p = bkp.figure(
@@ -358,9 +357,9 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
         plot_width=width_m, plot_height=plot_height,
         x_axis_location="above")
     # INDIVIDUAL ARTICLE RECT GLYPHS
-    r_ac = p.rect(y='jid', x='loc_cited', color=categ_hex['cited'], width=0.95, height=box_height, fill_alpha=0.3, source=source_c)
-    r_aa = p.rect(y='jid', x='loc_abstract', color=categ_hex['abstract'], width=0.95, height=box_height, fill_alpha=0.3, source=source_a, view=view_aa)
-    r_at = p.rect(y='jid', x='loc_title', color=categ_hex['title'], width=0.95, height=box_height, fill_alpha=0.3, source=source_a, view=view_at)
+    r_ac = p.rect(y='jid', x='loc_cited', color=categ_hex['cited'], width=0.95, height=0.95, fill_alpha=0.3, source=source_c)
+    r_aa = p.rect(y='jid', x='loc_abstract', color=categ_hex['abstract'], width=0.95, height=0.95, fill_alpha=0.3, source=source_a, view=view_aa)
+    r_at = p.rect(y='jid', x='loc_title', color=categ_hex['title'], width=0.95, height=0.95, fill_alpha=0.3, source=source_a, view=view_at)
     # OVERLAYED TEXT GLYPHS
     p.text(y='jid', x='loc_cited', text='cited', source=source_j, **text_props)
     p.text(y='jid', x='loc_abstract', text='abstract', source=source_j, **text_props)
@@ -374,14 +373,14 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     r_i = p_l.hbar(y='jid', height=0.4, left=0, right='ax_impact', source=source_j)
 
     # WIDGETS
-    option_dict = {METRIC_NAMES[i]: i for i in METRIC_NAMES}
+    # IMPACT SELECT
+    metric_options = {METRIC_NAMES[i]: i for i in METRIC_NAMES}
     default_metric_label = METRIC_NAMES[_DEFAULT_IMPACT]
-    select_kws = dict(width=150, width_policy='fixed', margin=(5, 5, 5, 45))
+    select_kws = dict(width=100, width_policy='fixed', margin=(5, 5, 5, 15))
     select1 = bkm.widgets.Select(title="Impact metric:",
                                  value=default_metric_label,
-                                 options=list(option_dict),
+                                 options=list(metric_options),
                                  **select_kws)
-
     impact_js = """const option = select.value;
             const option_dict = %s;
             const new_data = Object.assign({}, source.data);
@@ -396,12 +395,20 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
             ax[0].axis_label = option;
             xrange.start = max_impact;
             source.data = new_data;
-            """ % option_dict
-
+            """ % metric_options
     select1.js_on_change('value', bkm.callbacks.CustomJS(
         args=dict(select=select1, xrange=p_l.x_range, ax=p_l.xaxis, source=source_j),
         code=impact_js))
-
+    # SORT SELECT
+    select2 = bkm.widgets.Select(title='Sort by:', value='CAT', width=120,
+                                 width_policy='fixed',
+                                 options=list(factor_dict))
+    select2.js_on_change('value', bkm.callbacks.CustomJS(
+        args=dict(select=select2, y_range=p.y_range, source=source_a),
+        code=f"""const range_dict = %s; 
+             y_range.factors = range_dict[select.value];
+             source.change.emit();"""  # y_range.change.emit();
+             % factor_dict))
 
     # RIGHT HAND SIDE: SCATTER AND WHISKER
     p_r = bkp.figure(
@@ -409,7 +416,8 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
         y_axis_location='right', plot_width=width_r, plot_height=plot_height,
         x_axis_label='Similarity', x_axis_location="above")
     p_r.add_layout(bkm.Whisker(source=source_j, base='jid', dimension='width',
-                               upper="sim_max", lower="sim_min"))
+                               upper="sim_max", lower="sim_min",
+                               line_alpha=1, line_color='gray', line_width=0.5))
     factor_cm = bkt.factor_cmap('categ', palette=a_colors, factors=stack_factors)
     r_as = p_r.circle(y=bkt.jitter('jid', width=0.5, range=p_r.y_range),
                       x='sim_max', source=source_a,  # x_range_name='ax_sim',
@@ -443,19 +451,19 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     p.add_tools(hover_a, hover_c)
     p_r.add_tools(hover_s)
 
-    # MINIMAL STYLING FOR AXES/TICKS
+    # MINIMAL STYLING FOR AXES/TICKS/GRIDLINES
     for fig in [p, p_r, p_l]:
         fig.outline_line_color = None
         fig.grid.grid_line_color = None
         fig.axis.axis_line_color = None
         fig.axis.major_tick_line_color = None
         fig.axis.major_label_standoff = 0
-    p_r.axis[1].group_text_color = '#ffffff'
+    p_r.yaxis.group_text_color = '#ffffff'  # hides y_range j_id group
     # p_l.axis[1].axis_line_color = '#000000'
     p_l.yaxis.visible = False
     p.yaxis.visible = False
-
-    grid = bkl.gridplot([[select1], [p_l, p, p_r]], toolbar_location='left')
+    select_row = bkl.row(select1, select2)
+    grid = bkl.gridplot([[select_row], [p_l, p, p_r]], toolbar_location='left')
 
     if show_plot:
         bkp.show(grid)
@@ -556,3 +564,23 @@ def plot_vertical_stacked(jf, af, plot_width=500, n_journals=10):
 
 def get_color_hex(color_name):
     return mpl.colors.rgb2hex(mpl.colors.to_rgba(color_name)[:3])
+
+
+def _get_journal_factor_dict(jf):
+    """Create dictionary of sorting name -> factor range."""
+    metric_col_dict = {METRIC_NAMES[i]: i for i in METRIC_NAMES}
+    sort_dict = OrderedDict({'CAT': ['CAT', 'sim_sum']})
+    for metric_name in metric_col_dict:
+        sort_dict[metric_name] = [metric_col_dict[metric_name], 'sim_sum']
+    sort_dict.update([
+                      ('Max similarity', ['sim_max', 'sim_sum']),
+                      ('Cited', ['cited', 'sim_sum']),
+                      ('Abstract', ['abstract', 'sim_sum']),
+                      ('Title', ['title', 'sim_sum']),
+                      ])
+    index_dict = {}
+    for sort_name in sort_dict:
+        index_dict[sort_name] = \
+            [list(i) for i in jf.sort_values(sort_dict[sort_name], ascending=False)[
+                ['jid', 'abbr']].values][::-1]
+    return index_dict
