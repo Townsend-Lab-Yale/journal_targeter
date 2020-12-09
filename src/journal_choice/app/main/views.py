@@ -88,7 +88,7 @@ def search():
 
         session['ris_name'] = ref_obj.filename
         # Send queries to Jane and build jf, af, refs_df
-        j, a, jf, af, refs_df = run_queries(
+        jf, af, refs_df = run_queries(
             query_title=title, query_abstract=abstract, ris_path=tempf)
         tempf.close()
         fs.close()

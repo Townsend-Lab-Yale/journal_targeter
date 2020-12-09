@@ -105,7 +105,7 @@ def _build_demo_pickle(yaml_filename):
         demo = yaml.load(infile, yaml.SafeLoader)
     ris_path = os.path.join(DEMO_DIR, demo['ris_name'])
 
-    j, a, jf, af, refs_df = run_queries(
+    jf, af, refs_df = run_queries(
         query_title=demo['title'], query_abstract=demo['abstract'],
         ris_path=ris_path)
 
@@ -115,8 +115,6 @@ def _build_demo_pickle(yaml_filename):
         'title': demo['title'],
         'abstract': demo['abstract'],
         'ris_name': demo['ris_name'],
-        'j': j,
-        'a': a,
         'jf': jf,
         'af': af,
         'refs_df': refs_df,

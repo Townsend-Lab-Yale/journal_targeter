@@ -35,38 +35,63 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
             af: aggregated articles table, combining dups across searches.
             refs_df: table of de-duplicated articles from citations file.
     """
-    if query_title is None or query_abstract is None or ris_path is None:
-        _logger.debug("Loading demo data")
-        journals_t, articles_t, refs_df = process_inputs(use_title=True)
-        journals_a, articles_a, _ = process_inputs(use_title=False, refs_df=refs_df)
+    if query_title is None or query_abstract is None or (ris_path is None and
+                                                         refs_df is None):
+        raise ValueError("Provide query abstract, title and reference info.")
     else:
         refs_kw = dict(ris_path=ris_path) if refs_df is None else \
             dict(refs_df=refs_df)
         journals_t, articles_t, refs_df = process_inputs(
-            input_text=query_title, use_title=True, **refs_kw)
+            input_text=query_title, **refs_kw)
         journals_a, articles_a, _ = process_inputs(
-            input_text=query_abstract, use_title=False, refs_df=refs_df)
+            input_text=query_abstract, refs_df=refs_df)
 
-    # Get combined JOURNALS table
-    j1 = journals_t.reset_index()
-    j1.insert(0, 'source', 'title')
-    j2 = journals_a.reset_index()
-    j2.insert(0, 'source', 'abstract')
-    j = pd.concat([j1, j2], axis=0)
+    jf, af = aggregate_jane_journals_articles(journals_t, journals_a,
+                                              articles_t, articles_a)
 
-    # ADD 'jid' to capture unique journals (by jane_name, influence score)
-    j_tuples = [tuple(i) for i in j[['jane_name', 'influence']].fillna(-1)
-                .drop_duplicates().values]
-    jid_map = {i: str(ind) for ind, i in enumerate(j_tuples)}
-    jids = [jid_map[tuple(i)] for i in j[['jane_name', 'influence']]
-            .fillna(-1).values]
-    j.insert(0, 'jid', jids)
-    source_rank_dict = j.set_index(['source', 'j_rank'])['jid'].to_dict()
+    # FINALIZE MASTER JOURNALS TABLE
+    # Add JID to citations table (match on uid, then name<->jane_name, then create new)
+    jid_from_uid_dict = {i[1]: i[0] for i in jf['uid'].items() if i[1] != tuple()}
+    jid_from_name_dict = {name: uid for uid, name in jf.loc[jf['uid'] == tuple(), 'jane_name'].items()}
+    jid_matches = refs_df['uid'].map(jid_from_uid_dict)
+    jid_matches = jid_matches.where(~jid_matches.isnull(), refs_df['user_journal'].map(jid_from_name_dict))
+    extra_journals = set(refs_df.loc[jid_matches.isnull(), 'user_journal'])
+    jid_from_extra_dict = {name: f"c{ind}" for ind, name in enumerate(extra_journals)}
+    jid_matches = jid_matches.where(~jid_matches.isnull(), refs_df['user_journal'].map(jid_from_extra_dict))
+    refs_df['jid'] = jid_matches
+
+    # COMBINE CITED JOURNALS WITH JANE JOURNALS (-> JFM)
+    citations = refs_df[['jid', 'user_journal', 'uid']].value_counts() \
+        .reset_index(level=[1, 2]).rename(
+            columns={0: 'cited', 'user_journal': 'refs_name'})
+    jfm = jf.drop(['single_match'], axis=1).join(
+        citations, how='outer', lsuffix='_jane', rsuffix='_refs')
+    jfm.insert(0, 'uid', jfm.uid_refs.where(jfm.uid_jane.isnull(), jfm.uid_jane))
+    jfm['cited'] = jfm['cited'].fillna(0).astype(int)
+
+    # Add metrics and main title
+    jfm = _add_metrics_and_main_title(jfm)
+
+    # ADD CAT
+    zero_fill_cols = ['title_only', 'abstract_only', 'title', 'abstract', 'both']
+    # jfm.fillna({i: 0 for i in zero_fill_cols})
+    for col in zero_fill_cols:
+        jfm[col] = jfm[col].fillna(0).astype(int)
+    jfm['CAT'] = jfm['cited'] + jfm['abstract'] + jfm['title']
+    # ADD PROSPECT
+    for impact_col in metrics.METRIC_NAMES:
+        jfm[f'p_{impact_col}'] = jfm['CAT'] / (jfm['CAT'] + jfm[impact_col])
+
+    jfm = jfm.sort_values(['CAT', 'sim_sum'], ascending=False).reset_index()
+
+    # Add journal_name, using shortest name option
+    jfm.insert(1, 'journal_name', jfm.apply(lambda r: _pick_short_journal_name(
+        [r['jane_name'], r['refs_name'], r['main_title']]), axis=1))
 
     # Add short abbreviation for journals
-    abbrv = j['uid'].map(TM.pm['IsoAbbr'])
-    j['abbr'] = abbrv.where(~abbrv.isnull(), j['journal_name'])
-    j['abbr'] = j['abbr'].apply(lambda v: _get_short_str(v))
+    abbrv = jfm['uid'].map(TM.pm['IsoAbbr'])
+    jfm['abbr'] = abbrv.where(~abbrv.isnull(), jfm['journal_name'])
+    jfm['abbr'] = jfm['abbr'].apply(lambda v: _get_short_str(v))
 
     # Get combined ARTICLES table
     a1 = articles_t.reset_index()
@@ -78,27 +103,29 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
     a_jids = [source_rank_dict[tuple(i)] for i in a[['source', 'j_rank']].values]
     a.insert(0, 'jid', a_jids)
 
-    jf, af = aggregate_journals_articles(j, a)
+    af['abbr'] = af['jid'].map(jfm['abbr'])
 
-    return j, a, jf, af, refs_df
+    return jfm, af, refs_df
 
 
-def aggregate_journals_articles(j, a, from_api=True):
+def aggregate_jane_journals_articles(journals_t, journals_a, articles_t,
+                                     articles_a, from_api=True):
     """Build jf, af tables from tall-form journals and articles tables.
 
     Returns:
         jf (one row per journal), af (one row per article).
     """
     # JF: AGGREGATE JOURNAL TITLE+ABSTRACT RESULTS
+    j, a = _concat_jane_data(journals_t, journals_a, articles_t, articles_a)
+
     temp = j.copy()
     temp['conf_sum'] = temp['confidence']  # placeholder for conf sum aggregation
     groupby_col = 'jid'
-    get_first = ['journal_name', 'tags', 'abbr',
-                 'cited', 'uid', 'single_match', 'is_oa']
-    get_first += list(metrics.METRIC_NAMES)
+    get_first = ['jane_name', 'influence', 'tags', 'uid', 'single_match', 'is_oa']
+    # get_first += list(metrics.METRIC_NAMES)
     if from_api:
         get_first.extend(['in_medline', 'in_pmc'])
-    get_sum = ['n_articles', 'sim_sum', 'conf_sum']
+    get_sum = ['sim_sum', 'conf_sum']
     get_max = ['sim_max']
     get_min = ['sim_min']
     get_tuple = ['confidence', 'sims', 'pc_lower']  # inc categ
@@ -115,11 +142,7 @@ def aggregate_journals_articles(j, a, from_api=True):
         records.append(rec)
     tuple_cols = pd.DataFrame.from_records(records, index=groupby_col)
     jf = pd.concat([agg_cols, tuple_cols], axis=1)
-    n_unique = j.merge(a[['jid', 'a_id']], how='left', on=['jid']) \
-        .groupby(groupby_col)['a_id'].nunique()
-    jf['n_unique'] = n_unique
     jf['conf_pc'] = jf['conf_sum'] / jf['conf_sum'].sum() * 100
-    jf['cites+hits'] = jf['cited'] + jf['n_unique']
     if not from_api:
         jf['tags'] = jf['tags'].fillna('')
         jf['is_open'] = jf['tags'].map(lambda v: '\u2714' if 'open' in v else '')
@@ -131,7 +154,6 @@ def aggregate_journals_articles(j, a, from_api=True):
         jf['in_pmc'] = jf['in_pmc'].map(lambda v: '\u2714' if v else '')
     jf['conf_title'] = jf['confidence'].map(partial(_get_categ_confidence, categ='title'))
     jf['conf_abstract'] = jf['confidence'].map(partial(_get_categ_confidence, categ='abstract'))
-    jf['initials'] = jf.abbr.apply(_get_initials)
 
     af = pd.DataFrame.from_records(a.groupby('a_id').apply(_get_article_record).values)
 
@@ -144,22 +166,14 @@ def aggregate_journals_articles(j, a, from_api=True):
                                      'a_only': 'abstract_only',
                                      'in_both': 'both'})
     jf = jf.join(n_articles, on='jid', how='left')
-    jf['CAT'] = jf['cited'] + jf['abstract'] + jf['title']
-    for impact_col in metrics.METRIC_NAMES:
-        jf[f'p_{impact_col}'] = jf['CAT'] / (jf['CAT'] + jf[impact_col])
 
-    jf = jf.sort_values(['CAT', 'sim_sum'], ascending=False).reset_index()
-
-    af['abbr'] = af['jid'].map(jf.set_index('jid')['abbr'])
     af['PMID'] = af['a_id'].str[5:]
     af['authors_short'] = af['authors'].apply(_get_pm_authors_short)
     return jf, af
 
 
-def process_inputs(input_text=None, ris_path=None, use_title=True, refs_df=None):
-    """Get similar journals and perform matching (user<>pubmed; JANE<>pubmed).
-
-    """
+def process_inputs(input_text=None, ris_path=None, refs_df=None):
+    """Get similar journals and perform matching (user<>pubmed; JANE<>pubmed)."""
     # Get matches and scores
     journals, articles = lookup_jane(input_text)
 
@@ -172,19 +186,54 @@ def process_inputs(input_text=None, ris_path=None, use_title=True, refs_df=None)
     if refs_df is None:
         refs_df = identify_user_references(ris_path)
 
-    # Add citation counts
-    n_cites_dict = refs_df.groupby('uid').size().to_dict()
-    journals['cited'] = journals['uid'].map(n_cites_dict).fillna(0).astype(int)
-
-    # Add metrics
-    use_pm_cols = ['main_title'] + [i for i in metrics.METRIC_NAMES if i != 'influence']
-    journals = journals.join(TM.pm[use_pm_cols], how='left', on='uid')
-    # # Prioritize main_title name, but use jane_name if shorter
-    use_jane = journals['jane_name'].map(len) < journals['main_title'].map(
-        lambda v: len(v) if type(v) is str else np.inf)
-    journals['journal_name'] = journals['jane_name']\
-        .where(use_jane, journals['main_title'])
     return journals, articles, refs_df
+
+
+def _pick_short_journal_name(name_options):
+    """Get shortest string among options, ignoring null values.
+    >>> _pick_short_journal_name(
+        ['Clinical Infectious Diseases', 'Clin Infect Dis',
+         'Clinical infectious diseases : an official publication of the Infectious Diseases Society of America'])
+    'Clin Infect Dis'
+    """
+    name_lengths = [(name, len(name)) for name in name_options if not pd.isnull(name)]
+    name_lengths.sort(key=lambda i: i[1], reverse=False)
+    return name_lengths[0][0]
+
+
+def _concat_jane_data(journals_t, journals_a, articles_t, articles_a):
+    """Merge title and abstract tables into narrow journal and article tables."""
+    j1 = journals_t.reset_index()
+    j1.insert(0, 'source', 'title')
+    j2 = journals_a.reset_index()
+    j2.insert(0, 'source', 'abstract')
+    j = pd.concat([j1, j2], axis=0)
+
+    # ADD 'jid' to capture unique journals (by jane_name, influence score)
+    j_tuples = [tuple(i) for i in j[['jane_name', 'influence']].fillna(-1)
+                .drop_duplicates().values]
+    jid_map = {i: str(ind) for ind, i in enumerate(j_tuples)}
+    jids = [jid_map[tuple(i)] for i in j[['jane_name', 'influence']]
+            .fillna(-1).values]
+    j.insert(0, 'jid', jids)
+    source_rank_dict = j.set_index(['source', 'j_rank'])['jid'].to_dict()
+
+    # Get combined ARTICLES table
+    a1 = articles_t.reset_index()
+    a1.insert(0, 'source', 'title')
+    a2 = articles_a.reset_index()
+    a2.insert(0, 'source', 'abstract')
+    a = pd.concat([a1, a2], axis=0)
+    # Add jid to articles table
+    a_jids = [source_rank_dict[tuple(i)] for i in a[['source', 'j_rank']].values]
+    a.insert(0, 'jid', a_jids)
+    return j, a
+
+
+def _add_metrics_and_main_title(df):
+    use_pm_cols = ['main_title'] + [i for i in metrics.METRIC_NAMES if i != 'influence']
+    out = df.join(TM.pm[use_pm_cols], how='left', on='uid')
+    return out
 
 
 def _get_categ_confidence(conf_str, categ):

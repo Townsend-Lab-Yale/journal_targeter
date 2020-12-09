@@ -112,17 +112,8 @@ def identify_user_references(ris_path):
     df = df.join(m.set_index('input_title'), how='left', on='journal')
     # put UID column first
     df = df[['uid'] + [i for i in df.columns if i != 'uid']].copy()
-    # add scopus ID
-    scopus_id_dict = pubmed.load_scopus_map()
-    scopus_ids = df['uid'].map(lambda v: scopus_id_dict.get(v, np.nan))
-    df.insert(1, 'scopus_id', scopus_ids)
     # rename 'journal' to 'user_journal'
     df.rename(columns={'journal': 'user_journal'}, inplace=True)
-    unrecognized_titles = list(df.loc[df.scopus_id.isnull(), 'user_journal'])
-    if unrecognized_titles:
-        _logger.info(f"Titles without scopus match in user RIS: {unrecognized_titles}")
-    else:
-        _logger.info(f"All titles in user RIS have scopus match.")
     return df
 
 

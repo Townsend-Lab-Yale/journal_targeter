@@ -54,8 +54,7 @@ def build_bokeh_sources(jf, af, refs_df):
     source_a = bkm.ColumnDataSource(afs)
 
     # CITATIONS. user cited articles that overlap jane journal results
-    cited = refs_df.join(jf.set_index('uid')['jid'], on='uid', how='left') \
-        .dropna(axis=0, subset=['jid'])
+    cited = refs_df.copy()
     cited['loc_cited'] = 'cited'
     source_c = bkm.ColumnDataSource(cited)
 
@@ -117,7 +116,6 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
         }
         new_data.prospect = prospects;
         source.data = new_data;
-
     """ % option_dict))
 
     grid = bkl.gridplot([[bkl.row(select1, slider)], [p1]], toolbar_location='left')
