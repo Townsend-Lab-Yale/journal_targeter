@@ -29,8 +29,6 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
 
     Returns:
         Journals and article results, user citations (j, a, jf, af, refs_df).
-            j: tall-form journal and articles, one row per search-result pair.
-            a: tall-form journal and articles, one row per search-result pair.
             jf: aggregated journal table, combining dups across searches.
             af: aggregated articles table, combining dups across searches.
             refs_df: table of de-duplicated articles from citations file.
@@ -89,19 +87,12 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
         [r['jane_name'], r['refs_name'], r['main_title']]), axis=1))
 
     # Add short abbreviation for journals
-    abbrv = jfm['uid'].map(TM.pm['IsoAbbr'])
+    abbrv = jfm['uid'].map(TM.pm['abbr'])
     jfm['abbr'] = abbrv.where(~abbrv.isnull(), jfm['journal_name'])
     jfm['abbr'] = jfm['abbr'].apply(lambda v: _get_short_str(v))
 
-    # Get combined ARTICLES table
-    a1 = articles_t.reset_index()
-    a1.insert(0, 'source', 'title')
-    a2 = articles_a.reset_index()
-    a2.insert(0, 'source', 'abstract')
-    a = pd.concat([a1, a2], axis=0)
-    # Add jid to articles table
-    a_jids = [source_rank_dict[tuple(i)] for i in a[['source', 'j_rank']].values]
-    a.insert(0, 'jid', a_jids)
+    jfm['is_oa'].fillna(False, inplace=True)
+    jfm.loc[jfm.is_oa.isnull(), 'is_open'] = '?'
 
     af['abbr'] = af['jid'].map(jfm['abbr'])
 
