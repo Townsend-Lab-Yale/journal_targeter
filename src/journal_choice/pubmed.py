@@ -119,6 +119,36 @@ class TitleMatcher:
         self.titles = data['titles']
         self.pm = data['pm']
 
+    def refresh_matching_data(self, rebuild_scopus=False):
+        from . import scopus, metrics
+        time_start = time.perf_counter()
+        data = dict()
+        pm_full = load_pubmed_journals(refresh=True)
+        self._init_from_pm_full(pm_full)
+        # ADD SCOPUS DATA
+        if rebuild_scopus:
+            scopus.load_new_scopus_data_file()
+        pm = self.pm  # type: pd.DataFrame
+        pm = pm.merge(scopus.SCOP, left_index=True, right_index=True,
+                      how='left', validate='1:1')
+        # ADD CUSTOM METRICS
+        pm = metrics.add_metrics_to_pm(pm)
+        self.pm = pm
+        data['pm'] = self.pm
+        data['safe_abbrv_uid_dict'] = self.safe_abbrv_uid_dict
+        data['safe_uid_dict'] = self.safe_uid_dict
+        data['exact_uid_dict'] = self.exact_uid_dict
+        data['alt_uid_dict'] = self.alt_uid_dict
+        data['alt_safe_uid_dict'] = self.alt_safe_uid_dict
+        data['abbrv_uid_dict'] = self.abbrv_uid_dict
+        data['titles'] = self.titles
+        with gzip.open(TM_PICKLE_PATH, 'w') as infile:
+            pickle.dump(data, infile)
+        _logger.info(f"Updated TM data written to {TM_PICKLE_PATH}.")
+        time_end = time.perf_counter()
+        elapsed = time_end - time_start
+        _logger.info(f"Refreshed pubmed matching data in {elapsed:.1f} seconds.")
+
     def match_titles(self, titles, n_processes=1):
         """Match multiple titles against pubmed sources.
 
@@ -253,7 +283,7 @@ def load_pubmed_journals(refresh=False):
     Reload source from NCBI if refresh is True or file doesn't exist.
     """
     if refresh or not os.path.exists(JOURNALS_PATH):
-        refresh_pubmed_reference()
+        download_pubmed_reference()
     pm = pd.DataFrame.from_records(_yield_records(JOURNALS_PATH))
     # remove dashes from issn
     pm['ISSN (Print)'] = pm['ISSN (Print)'].str.replace('-', '')
@@ -282,7 +312,7 @@ def load_pubmed_journals(refresh=False):
     return pm
 
 
-def refresh_pubmed_reference():
+def download_pubmed_reference():
     """Download new Pubmed reference (J_Medline.txt) via ftp to data dir."""
     medline_url = "ftp://ftp.ncbi.nih.gov/pubmed/J_Medline.txt"
     with contextlib.closing(urllib_request.urlopen(medline_url)) as r:
@@ -298,7 +328,7 @@ def _load_metadata(pm):
     if new_uids:
         # new_names = pm.loc[pm.uid.isin(new_uids), 'JournalTitle']
         meta_new = _build_meta_from_uids(new_uids)
-        meta = pd.concat([meta, meta_new], axis=1, ignore_index=True)
+        meta = pd.concat([meta, meta_new], axis=0, ignore_index=True)
         meta.to_pickle(META_PATH)
         _logger.info(f"Update metadata archive with {len(new_uids)} new items.")
     return meta
@@ -471,13 +501,6 @@ def _unused_test_nlmids_for_lookup_failure(ids):
     if not problem_ids:
         _logger.info("IDs looked up successfully.")
     return problem_ids
-
-
-def load_scopus_map():
-    """Get dictionary of NLM UID -> Scopus ID, based on build_uid_match_table."""
-    with open(MATCH_JSON_PATH) as infile:
-        scopus_id_dict = json.load(infile)
-    return scopus_id_dict
 
 
 TM = TitleMatcher()
