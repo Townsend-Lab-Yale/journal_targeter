@@ -6,7 +6,6 @@ PUBMED journal list at ftp://ftp.ncbi.nih.gov/pubmed/J_Medline.txt
 import os
 import gzip
 import time
-import json
 import pickle
 import shlex
 import shutil
@@ -24,8 +23,7 @@ import pandas as pd
 from dotenv import load_dotenv, find_dotenv
 
 from . import DATA_DIR
-from .helpers import get_issn_safe, get_issn1, get_issn_comb, \
-    get_clean_lowercase, grouper
+from .helpers import get_issn_safe, get_issn_comb, get_clean_lowercase, grouper
 
 
 JOURNALS_PATH = os.path.join(DATA_DIR, 'J_Medline.txt')
@@ -69,10 +67,7 @@ class TitleMatcher:
             _logger.info('loading from TM pickle')
             self._init_from_pickle()
         else:
-            if pm is None:
-                _logger.info('No TM pickle, no pm provided: building pm from scratch.')
-                pm = load_pubmed_journals(refresh=False)
-            self._init_from_pm(pm)
+            self.refresh_matching_data()
 
     def _init_from_pm_full(self, pmf):
         """Generate matching data from full Pubmed journals table."""
@@ -260,9 +255,6 @@ def load_pubmed_journals(refresh=False):
     if refresh or not os.path.exists(JOURNALS_PATH):
         refresh_pubmed_reference()
     pm = pd.DataFrame.from_records(_yield_records(JOURNALS_PATH))
-    pm['isoabbr_nodots'] = pm['IsoAbbr'].str.replace('.', '')
-    dup_iso_abbrvs = pm['isoabbr_nodots'].value_counts().loc[lambda v: v > 1].index
-    pm['unique_isoabbr_nodots'] = ~pm.IsoAbbr.isin(dup_iso_abbrvs)
     # remove dashes from issn
     pm['ISSN (Print)'] = pm['ISSN (Print)'].str.replace('-', '')
     pm['ISSN (Online)'] = pm['ISSN (Online)'].str.replace('-', '')
@@ -272,16 +264,13 @@ def load_pubmed_journals(refresh=False):
     # get reference issn value (print > online)
     pm['issn_print'] = get_issn_safe(pm['ISSN (Print)'])
     pm['issn_online'] = get_issn_safe(pm['ISSN (Online)'])
-    pm['issn1'] = get_issn1(pm['ISSN (Print)'], pm['ISSN (Online)'])
     pm['issn_comb'] = get_issn_comb(pm['ISSN (Print)'], pm['ISSN (Online)'])
 
     _fill_uids(pm, save_pickle=True)
     meta = _load_metadata(pm)
     pm = pm.merge(meta, on='uid', how='inner', validate='one_to_one')
     pm['is_active'] = (pm['endyear'] == '9999')
-    pm['isoabbr_safe'] = pm.MedAbbr\
-        .where(pm.isoabbr_nodots == '', pm.isoabbr_nodots)\
-        .apply(get_clean_lowercase)
+    pm['abbr_safe'] = pm.MedAbbr.apply(get_clean_lowercase)
     pm.set_index('uid', inplace=True)
     pm.insert(0, 'main_title',
               pm.titlemainlist.apply(lambda v: v[0]['title'].rstrip('.')))
@@ -289,11 +278,7 @@ def load_pubmed_journals(refresh=False):
     dup_titles_safe = (pm['title_safe'].value_counts() > 1) \
         .loc[lambda v: v].index
     pm['is_unique_title_safe'] = ~pm['title_safe'].isin(dup_titles_safe)
-
-    # ADD SCOPUS ID
-    scopus_id_dict = load_scopus_map()
-    pm['scopus_id'] = pd.Series(pm.index, index=pm.index).map(scopus_id_dict)\
-        .fillna(-1).astype(int)
+    pm['in_medline'] = pm['currentindexingstatus'].map({'Y': True, 'N': False})
     return pm
 
 
