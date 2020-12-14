@@ -1,6 +1,6 @@
 """Data consolidation."""
 import re
-import json
+import time
 import logging
 from functools import partial
 from collections import defaultdict, OrderedDict
@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from . import metrics
-from .pubmed import TM, MATCH_JSON_PATH, MATCH_PICKLE_PATH
+from .pubmed import TM
 from .ref_loading import identify_user_references
 from .lookup import lookup_jane
 from .helpers import get_issn_comb
@@ -355,7 +355,8 @@ def _get_query_table(titles=None, issn_print=None, issn_online=None):
 def lookup_uids_from_title_issn(titles=None,
                                 issn_print=None,
                                 issn_online=None,
-                                n_processes=1):
+                                n_processes=1,
+                                resolve_uid_conflicts=True):
     """Look up NLM UIDs using journal names and ISSNs, if provided.
 
     Matching priority: ISSN print+online > ISSN print > ISSN online > title.
@@ -365,11 +366,14 @@ def lookup_uids_from_title_issn(titles=None,
         issn_print (iterable): OPTIONAL print or generic ISSN iterable.
         issn_online (iterable): OPTIONAL online ISSN / e-ISSN iterable.
         n_processes (int): number of processes. Use mutiprocessing if >1.
+        resolve_uid_conflicts (bool): if True, disallow multiple records to map
+            to same UID, choosing winner based on matching priority/score.
     Returns:
         match (pd.DataFrame), including `input_title`, `uid`, and other matching
         metadata columns. Discrepant UIDs from multiple sources are indicated by
         `n_vals` > 1, with sources separated by '|'.
     """
+    time_start = time.perf_counter()
 
     match = TM.match_titles(list(titles), n_processes=n_processes)
     match.rename(columns={
@@ -393,7 +397,7 @@ def lookup_uids_from_title_issn(titles=None,
     has_comb_issn = 'issn_comb' in df.columns
     if has_comb_issn:
         # issn_comb matching useful when issnp repeated but issnp+issno seen once
-        pm_issn_comb1 = pm.loc[pm.is_active, 'issn_comb'].drop_duplicates(keep=False).reset_index()
+        pm_issn_comb1 = pm['issn_comb'].drop_duplicates(keep=False).reset_index()
         # skip repeated issn_comb pairs in query table
         df_issn_comb = df['issn_comb'].drop_duplicates(keep=False).reset_index()
         issnc = pm_issn_comb1.merge(df_issn_comb, how='inner', on='issn_comb') \
@@ -434,76 +438,61 @@ def lookup_uids_from_title_issn(titles=None,
              columns=['n_vals', 'categ'], index=match.index)
     match = pd.concat([match, categs], axis=1)
 
-    # Get 'final' UIDs based on ISSN combined > ISSN print > ISSN online > title
+    # Resolve competing UIDs with ISSN combined > ISSN print > ISSN online > title
     if has_comb_issn:
-        final = match.on_issnp.where(match.on_issnc.isnull(), match.on_issnc)
-        final = match.on_issno.where(final.isnull(), final)
+        winner = match.on_issnp.where(match.on_issnc.isnull(), match.on_issnc)
+        winner = match.on_issno.where(winner.isnull(), winner)
     else:
-        final = match.on_issnp
-    final = match.on_name.where(match.on_name_single & final.isnull(), final)
-    match['uid'] = final
+        winner = match.on_issnp
+    winner = match.on_name.where(match.on_name_single & winner.isnull(), winner)
+    match['uid'] = winner
+
+    # Handle cases where multiple scopus IDs map to single NLM UID.
+    ambig_uids = set((match['uid'].value_counts() > 1).loc[lambda v: v].index.values)
+    if ambig_uids and resolve_uid_conflicts:
+        conflict_uids = set((match['uid'].value_counts() > 1).loc[lambda v: v].index.values)
+        conflicts = match[match['uid'].isin(conflict_uids)].reset_index()
+        conflicts['score'] = conflicts.apply(_get_match_score, axis=1)
+        drop_indices = set()
+        match_index_name = match.index.name or 'index'
+        for uid, g in conflicts.groupby('uid'):
+            max_score = g.score.max()
+            is_max = g.score.eq(max_score)
+            if is_max.sum() == 1:
+                drop_indices.update(g.loc[~is_max, match_index_name])
+            else:
+                drop_indices.update(g[match_index_name])
+        match.loc[drop_indices, 'uid'] = np.nan
+        match['dropped'] = match.index.isin(drop_indices)
+        n_dropped = len(drop_indices)
+        _logger.info(f"Dropped {n_dropped} matches during conflict resolution.")
+        assert match.uid.value_counts().max() == 1, "Scopus matching still includes conflicts."
+    elif ambig_uids and not resolve_uid_conflicts:
+        _logger.info(f"Note: {len(ambig_uids)} records map to same UID.")
+    elif not ambig_uids:
+        _logger.info("No conflicting matches found when mapping to pubmed.")
+    time_end = time.perf_counter()
+    _logger.info(f"Matching to Pubmed UIDs took {time_end - time_start:.1f} seconds")
+    n_unmatched = match.uid.isnull().sum()
+    n_matched = len(match) - n_unmatched
+    _logger.info(f"Successfully matched {n_matched} journals, leaving {n_unmatched} "
+                 f"not linked to pubmed.")
     return match
 
 
-def build_uid_match_table(n_processes=4, write_files=False):
-    """Get NLM UIDs for all Scopus journal IDs based on Scopus names and ISSNs.
+def _get_match_score(r):
+    score = 0
+    if 'issn' in r.categ:
+        score += 8
+    if r.name_method == 'exact canonical':
+        score += 4
+    elif r.name_method == 'exact safe':
+        score += 2
+    elif r.name_method != 'unmatched':
+        score += 1
+    return score
 
-    Args:
-        n_processes (int): number of processes. Use mutiprocessing if >1.
-        write_files (bool): write match table to pickle and json in DATA dir.
-    """
-    pm = TM.pm
-    from . import scopus
-    scop = scopus.load_scopus_journals_reduced()
-    # Attempt match on Scopus journal titles
-    titles = scop.journal_name.values
-    match = TM.match_titles(titles, n_processes=n_processes)
-    match.rename(columns={
-        'uid': 'on_name',
-        'categ': 'name_method',
-        'single_match': 'on_name_single',
-        }, inplace=True)
-    # Add COMBINED ISSN matching info
-    pm_issn_comb = pm.loc[pm.is_active, 'issn_comb'].drop_duplicates(keep=False).reset_index()
-    scop_issn_comb = scop.issn_comb.drop_duplicates(keep=False).reset_index()
-    issnc = pm_issn_comb.merge(scop_issn_comb, how='inner', on='issn_comb').set_index('scopus_id')['uid']
-    match['on_issnc'] = issnc
-    # Add Print ISSN matching info
-    pm_issnp = pm.issn_print.dropna().drop_duplicates(keep=False).reset_index()
-    scop_issnp = scop.issn_print.dropna().drop_duplicates(keep=False).reset_index()
-    issnp = pm_issnp.merge(scop_issnp, how='inner', on='issn_print').set_index('scopus_id')['uid']
-    match['on_issnp'] = issnp
-    # Add Online ISSN matching info
-    pm_issno = pm.issn_online.dropna().drop_duplicates(keep=False).reset_index()
-    scop_issno = scop.issn_online.dropna().drop_duplicates(keep=False).reset_index()
-    issno = pm_issno.merge(scop_issno, how='inner', on='issn_online').set_index('scopus_id')['uid']
-    match['on_issno'] = issno
-    # Add boolean for ISSN variant matches
-    match['bool_name'] = match.name_method != 'unmatched'
-    match['bool_issnc'] = ~match.on_issnc.isnull()
-    match['bool_issnp'] = ~match.on_issnp.isnull()
-    match['bool_issno'] = ~match.on_issno.isnull()
 
-    # Count matches and categorize discrepancies for each scopus ID
-    categs = pd.DataFrame.from_records(match.apply(_classify_ids, axis=1).values,
-                                       columns=['n_vals', 'categ'],
-                                       index=match.index)
-    match = pd.concat([match, categs], axis=1)
-
-    # Get 'final' UIDs based on ISSN combined > ISSN print > ISSN online > title
-    final = match.on_issnp.where(match.on_issnc.isnull(), match.on_issnc)
-    final = match.on_issno.where(final.isnull(), final)
-    final = match.on_name.where(match.on_name_single & final.isnull(), final)
-    match['uid'] = final
-    # Get dictionary of NLM UIDs -> SCOPUS IDs
-    temp = match['uid'].dropna()
-    scop_dict = dict(zip(temp.values, temp.index.astype(str).values))
-
-    if write_files:
-        match.to_pickle(MATCH_PICKLE_PATH)
-        with open(MATCH_JSON_PATH, 'w') as outfile:
-            json.dump(scop_dict, outfile)
-    return match
 
 
 def _classify_ids(r, cols=('issnc', 'issnp', 'issno')):
@@ -534,54 +523,3 @@ def get_categ_from_uid_dict(d):
         dd[d[i]].append(i)
     categ = '|'.join(sorted(['_'.join(sorted(i)) for i in dd.values()]))
     return categ
-
-
-def _unused_get_pubmed_mapping(pub, scop):
-
-    testt = pd.merge(pub[pub.is_unique_title_safe], scop[scop.is_unique_title_safe],
-                     on='title_safe', how='inner', suffixes=['_pub', '_scop'])
-    testt.rename(columns={'title_safe': 'title_safe_scop'}, inplace=True)
-
-    testp = pd.merge(
-        pub[pub.unique_isoabbr_nodots].dropna(axis=0, subset=['issn_print']),
-        scop.dropna(axis=0, subset=['issn_print']),
-        on='issn_print', how='inner', suffixes=['_pub', '_scop'])
-
-    testo = pd.merge(
-        pub[pub.unique_isoabbr_nodots].dropna(axis=0, subset=['issn_online']),
-        scop.dropna(axis=0, subset=['issn_online']),
-        on='issn_online', how='inner', suffixes=['_pub', '_scop'])
-
-    testc = pd.merge(
-        pub[pub.unique_isoabbr_nodots].dropna(axis=0, subset=['issn_comb']),
-        scop.dropna(axis=0, subset=['issn_comb']),
-        on='issn_comb', how='inner', suffixes=['_pub', '_scop'])
-
-    # test1 = pd.merge(
-    #     pub[pub.unique_isoabbr_nodots].dropna(axis=0, subset=['issn1']),
-    #     scop.dropna(axis=0, subset=['issn1']),
-    #     on='issn1', how='inner', suffixes=['_pub', '_scop'])
-
-    safe_to_abbr_dict = pub[pub.is_unique_title_safe & pub.unique_isoabbr_nodots] \
-        .set_index('title_safe')['isoabbr_nodots'].to_dict()
-
-    ambiguous_abbrvs = set()
-
-    for merged, method in [(testc, 'issn_combined'),
-                           (testo, 'issn_print'),
-                           (testp, 'issn_online'),
-                           (testt, 'safe_title'),
-                           ]:
-        print(f"Linking Scopus to Pubmed table via {method}")
-        updates = merged.set_index('title_safe_scop')['isoabbr_nodots'].to_dict()
-        n_additions = 0
-        for key in updates:
-            if key in safe_to_abbr_dict:
-                # Handle contradictory update
-                if safe_to_abbr_dict[key] != updates[key]:
-                    print(f"CLASH {key!r}: PUBMED {safe_to_abbr_dict[key]} | SCOPUS: {updates[key]}")
-                    ambiguous_abbrvs.add(key)
-            else:
-                n_additions += 1
-                safe_to_abbr_dict[key] = updates[key]
-        print(f"{n_additions} via {method}.\n")
