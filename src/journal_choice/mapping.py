@@ -322,8 +322,8 @@ def _coerce_issn_to_numeric_string(issn):
     if pd.isnull(issn):
         return np.nan
     assert(type(issn) is str), "ISSN must be a string."
-    issn = ''.join([i for i in issn if i.isnumeric() or i == 'X'])
-    return issn
+    issn = ''.join([i for i in issn if i.isnumeric() or i in {'X', 'x'}])
+    return issn.upper()
 
 
 def _get_query_table(titles=None, issn_print=None, issn_online=None):
