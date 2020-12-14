@@ -54,22 +54,6 @@ def get_issn_safe(issn_series):
     return issn_series.where(~issn_series.isin(dups), np.nan)
 
 
-def get_issn1(print_series, online_series, drop_dups=True):
-    """Get 'master' ISSN value (print > online).
-
-    Args:
-        print_series (pd.Series): print ISSN (without dashes).
-        online_series (pd.Series): online ISSN (without dashes).
-        drop_dups (bool): use nan if duplicated value.
-    """
-    issn1 = print_series.where(print_series != '', online_series)\
-        .replace('', np.nan)
-    if drop_dups:
-        dups = (issn1.value_counts() > 1).loc[lambda v: v].index
-        return issn1.where(~issn1.isin(dups), np.nan)
-    return issn1
-
-
 def get_issn_comb(print_series, online_series, drop_dups=True):
     """Get combined print + online ISSN string, nan if duplicate.
 
