@@ -40,15 +40,6 @@ def save_metric_map(uid_dict=None, metric_df=None, metric_col_map=None,
     ref.reset_index().to_csv(outpath, sep='\t', index=False)
 
 
-def update_metrics_scopus():
-    from .scopus import SCOP
-    from .pubmed import load_scopus_map
-    scop_dict = load_scopus_map()
-    save_metric_map(uid_dict=scop_dict, metric_df=SCOP,
-                    metric_col_map={'citescore': 'citescore'},
-                    metric_basename='scopus')
-
-
 def update_metrics_jcr(uid_jcr_dict=None, jcr_df=None):
     save_metric_map(uid_dict=uid_jcr_dict, metric_df=jcr_df,
                     metric_col_map={'journalImpactFactor': 'impact'},
@@ -82,8 +73,7 @@ def update_metric_list():
             metric_list.extend(metrics)
     METRIC_NAMES.clear()
     METRIC_NAMES.update({i: i.title() for i in metric_list})
-    if 'citescore' in METRIC_NAMES:
-        METRIC_NAMES['citescore'] = 'CiteScore'
+    METRIC_NAMES['citescore'] = 'CiteScore'
     METRIC_NAMES['influence'] = 'Influence'
 
 
