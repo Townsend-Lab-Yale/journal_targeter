@@ -28,6 +28,29 @@ class ColumnException(Exception):
     pass
 
 
+def load_new_scopus_data_file(n_processes=None, store=True):
+    """Load Excel file and match to pubmed titles, updating SCOP table."""
+    df = load_scopus_journals_reduced()
+    if not n_processes:
+        n_processes = os.environ.get('N_MATCH_PROCESSES', 3)
+    match = lookup_uids_from_title_issn(titles=df['journal_name'],
+                                        issn_print=df['Print-ISSN'],
+                                        issn_online=df['E-ISSN'],
+                                        n_processes=n_processes)
+    # Add final UID to Scopus table
+    df.rename(columns={'journal_name': 'journal_scopus'}, inplace=True)
+    df['uid'] = match['uid'].values
+    match.index = df.index
+    if store:
+        global SCOP
+        use_columns = ['scopus_id', 'uid', 'journal_scopus', 'is_open', 'citescore']
+        scopus_sm = df.reset_index()[use_columns].dropna(subset=['uid']).set_index('uid')
+        SCOP = scopus_sm
+        scopus_sm.to_pickle(SCOPUS_PICKLE_PATH)
+        _logger.info(f"Scopus table updated and written to {SCOPUS_PICKLE_PATH}.")
+    return df, match
+
+
 def load_scopus_journals_full(scopus_xlsx_path=SCOPUS_XLSX_PATH):
     """Load Scopus journals table.
 
