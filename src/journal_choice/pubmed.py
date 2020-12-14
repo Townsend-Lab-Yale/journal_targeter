@@ -35,9 +35,7 @@ URL_ESEARCH = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi'
 load_dotenv(find_dotenv())  # for NCBI API KEY
 ESUMMARY_PATH = os.environ.get('ESUMMARY_PATH')
 UID_DICT_PATH = os.path.join(DATA_DIR, 'uid_dict.pickle')
-MATCH_PICKLE_PATH = os.path.join(DATA_DIR, 'match.pickle.gz')
-MATCH_JSON_PATH = os.path.join(DATA_DIR, 'scopus_match.json')
-TM = None  #
+TM = None  # will hold matching functions and data
 TM_PICKLE_PATH = os.path.join(DATA_DIR, 'tm.pickle.gz')
 
 _logger = logging.getLogger(__name__)
@@ -76,13 +74,13 @@ class TitleMatcher:
                 pm = load_pubmed_journals(refresh=False)
             self._init_from_pm(pm)
 
-    def _init_from_pm(self, pm):
-        self.pm = pm
-        titles = self._gather_titles(pm)
+    def _init_from_pm_full(self, pmf):
+        """Generate matching data from full Pubmed journals table."""
+        titles = self._gather_titles(pmf)
         self.titles = titles
         # EXACT title match dictionary
         _logger.info("Building exact title match dictionary.")
-        temp = pm.loc[pm.is_active, 'main_title'].drop_duplicates(keep=False)
+        temp = pmf.loc[pmf.is_active, 'main_title'].drop_duplicates(keep=False)
         exact_uid_dict = dict(zip(temp.values, temp.index))
         self.exact_uid_dict = exact_uid_dict
         # ALT title match dictionary
@@ -91,7 +89,7 @@ class TitleMatcher:
         self.alt_uid_dict = alt_uid_dict
         # Safe match dictionary
         _logger.info("Building safe title match dictionary.")
-        temp = pm.loc[pm.is_active, 'title_safe'].drop_duplicates(keep=False)
+        temp = pmf.loc[pmf.is_active, 'title_safe'].drop_duplicates(keep=False)
         safe_uid_dict = dict(zip(temp.values, temp.index))
         self.safe_uid_dict = safe_uid_dict
         # ALT safe match dictionary
@@ -99,13 +97,20 @@ class TitleMatcher:
             .apply(lambda s: tuple(s.unique())).to_dict()
         self.alt_safe_uid_dict = alt_safe_uid_dict
         # Abbreviation dictionaries
-        temp = pm.loc[pm.is_active, 'IsoAbbr'].drop_duplicates(keep=False)
+        temp = pmf.loc[pmf.is_active, 'MedAbbr'].drop_duplicates(keep=False)
         abbrv_uid_dict = dict(zip(temp.values, temp.index))
         self.abbrv_uid_dict = abbrv_uid_dict
-        temp = pm.loc[pm.is_active, 'isoabbr_safe']  # .drop_duplicates(keep=False)
-        safe_abbrv_uid_dict = temp.reset_index().groupby('isoabbr_safe')\
+        temp = pmf.loc[pmf.is_active, 'abbr_safe']  # .drop_duplicates(keep=False)
+        safe_abbrv_uid_dict = temp.reset_index().groupby('abbr_safe')\
             .apply(lambda g: tuple(g.uid.unique())).to_dict()
         self.safe_abbrv_uid_dict = safe_abbrv_uid_dict
+
+        # TRIM PM: KEEP ESSENTIAL COLUMNS, DROP OTHERS
+        rename_dict = {'MedAbbr': 'abbr'}
+        keep_cols = ['main_title', 'issn_comb', 'issn_print', 'issn_online',
+                     'abbr', 'in_medline']
+        pm = pmf.rename(columns=rename_dict)[keep_cols]
+        self.pm = pm
 
     def _init_from_pickle(self):
         with gzip.open(TM_PICKLE_PATH, 'r') as infile:
