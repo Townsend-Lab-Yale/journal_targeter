@@ -33,7 +33,7 @@ def get_demo_data(file_prefix):
     return data
 
 
-def update_demo_plot(file_prefix):
+def update_demo_plot(file_prefix, use_pickle=True):
     """Update bokeh plot js and html for specified demo file.
 
     Plot components can become out of date. This function updates them.
@@ -41,7 +41,17 @@ def update_demo_plot(file_prefix):
     pickle_path = os.path.join(DEMO_DIR, f'{file_prefix}.pickle')
     with open(pickle_path, 'rb') as infile:
         data = pickle.load(infile)
-    js, divs = get_bokeh_components(data['jf'], data['af'], data['refs_df'])
+    if use_pickle:
+        jf = data['jf']
+        af = data['af']
+        refs_df = data['refs_df']
+    else:
+        jf, af, refs_df = run_queries(data['title'],
+                                      query_abstract=data['abstract'],
+                                      refs_df=data['refs_df'])
+        data.update({'jf': jf,
+                     'af': af})
+    js, divs = get_bokeh_components(jf, af, refs_df)
     data.update({'bokeh_js': js,
                  'bokeh_divs': divs
                  })
