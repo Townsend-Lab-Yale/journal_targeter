@@ -36,9 +36,8 @@ def build_bokeh_sources(jf, af, refs_df):
     # JOURNALS
     jfs = jf.copy()
     for metric in METRIC_NAMES:
-        jfs[f'{metric}_table'] = jfs[metric].map(
-            lambda v: round(v, 1) if not np.isnan(v) else -1
-        )
+        jfs[metric].fillna(-1, inplace=True)
+        jfs[f'p_{metric}'].fillna(-1, inplace=True)
     # checkmark columns
     jfs['is_oa_str'] = jfs['is_open'].map({True: '✔', False: '', np.nan: '?'})
     jfs['in_ml_str'] = jfs['in_medline'].map({True: '✔', False: '', np.nan: '?'})
@@ -118,9 +117,14 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
         let prospects = [];
         for (let ind = 0; ind < impact_vals.length; ind++){
             let impact = impact_vals[ind];
-            let cat = cat_vals[ind];
-            let p = cat / (weight * impact + cat);
-            prospects.push(p);
+            if (impact >= 0){
+                let cat = cat_vals[ind];
+                let p = cat / (weight * impact + cat);
+                prospects.push(p);
+            }
+            else {
+                prospects.push(-1);
+            }
         }
         new_data.prospect = prospects;
         source.data = new_data;
@@ -249,11 +253,10 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     w_xs = 30
 
     metric_dict = OrderedDict({
-        f'{i}_table': (METRIC_NAMES[i], w_sm) for i in METRIC_NAMES
+        i: (METRIC_NAMES[i], w_sm) for i in METRIC_NAMES
     })
-    if 'citescore' in METRIC_NAMES:
-        metric_dict['citescore_table'] = ('CiteScore', w_md)
-    metric_dict['influence_table'] = ('Inf', w_sm)
+    metric_dict['citescore'] = ('CiteScore', w_md)
+    metric_dict['influence'] = ('Inf', w_sm)
     col_param_dict = OrderedDict({
         'journal_name': ('Journal', w_journal),
         'CAT': ('CAT', w_sm),
@@ -264,6 +267,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     })
     col_param_dict.update(metric_dict)
     col_param_dict.update({
+        'prospect': ('P', w_sm),
         'is_oa_str': ('OA', w_sm),
         'in_ml_str': ('ML', w_sm),
         'in_pmc_str': ('PMC', w_sm),
@@ -288,10 +292,9 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
         'in_ml_str': bkm.widgets.StringFormatter(),
         'in_pmc_str': bkm.widgets.StringFormatter(),
     }
-    format_dict.update({i: bkm.widgets.HTMLTemplateFormatter(
-        template=f"""<span class="col-metric col-{i} """
-                 """<%= value == -1 ? 'neg-impact' : 'pos-impact' %> "><%= Math.round(value * 10) / 10 %></span>""")
-        for i in list(metric_dict) + ['conf_pc', 'sim_sum', 'sim_max']})
+    format_dict.update({i: _get_custom_formatter(dp=1) for i in metric_dict})
+    format_dict.update({'prospect': _get_custom_formatter(dp=2)})
+    format_dict.update({i: _get_custom_formatter(dp=0) for i in ['conf_pc', 'sim_sum', 'sim_max']})
     table_cols = OrderedDict({
         col: dict(width=col_param_dict[col][1],
                   formatter=format_dict.get(col,
@@ -316,6 +319,14 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     if show_plot:
         bkio.show(data_table)
     return data_table
+
+
+def _get_custom_formatter(dp=1):
+    scalar = 10 ** dp
+    return bkm.widgets.HTMLTemplateFormatter(
+        template=f"""<span class="col-metric """
+                 """<%= value == -1 ? 'neg-impact' : 'pos-impact' %> ">"""
+                 f"""<%= Math.round(value * {scalar}) / {scalar} %></span>""")
 
 
 def plot_icats(source_j, source_a, source_c, show_plot=False):
