@@ -80,7 +80,7 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
     for impact_col in metrics.METRIC_NAMES:
         jfm[f'p_{impact_col}'] = jfm['CAT'] / (jfm['CAT'] + jfm[impact_col])
 
-    jfm = jfm.sort_values(['CAT', 'sim_sum'], ascending=False).reset_index()
+    jfm = jfm.sort_values(['CAT', 'sim_sum'], ascending=False).reset_index()  # type: pd.DataFrame
 
     # Add journal_name, using shortest name option
     jfm.insert(1, 'journal_name', jfm.apply(lambda r: _pick_short_journal_name(
@@ -91,8 +91,14 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
     jfm['abbr'] = abbrv.where(~abbrv.isnull(), jfm['journal_name'])
     jfm['abbr'] = jfm['abbr'].apply(lambda v: _get_short_str(v))
 
-    jfm['is_oa'].fillna(False, inplace=True)
-    jfm.loc[jfm.is_oa.isnull(), 'is_open'] = '?'
+    # Fill is_open and in_medline from pm (partial via Jane)
+    is_open = jfm['uid'].map(TM.pm['is_open'])
+    is_open = is_open.where(jfm['is_oa'].isnull(), jfm['is_oa'])
+    jfm['is_open'] = is_open
+    jfm.drop(columns=['is_oa'], inplace=True)
+    in_medline = jfm['uid'].map(TM.pm['in_medline'])
+    in_medline = in_medline.where(jfm['in_medline'].isnull(), jfm['in_medline'])
+    jfm['in_medline'] = in_medline
 
     af['abbr'] = af['jid'].map(jfm['abbr'])
 
@@ -136,13 +142,8 @@ def aggregate_jane_journals_articles(journals_t, journals_a, articles_t,
     jf['conf_pc'] = jf['conf_sum'] / jf['conf_sum'].sum() * 100
     if not from_api:
         jf['tags'] = jf['tags'].fillna('')
-        jf['is_open'] = jf['tags'].map(lambda v: '\u2714' if 'open' in v else '')
-        jf['in_medline'] = jf['tags'].map(lambda v: '\u2714' if 'Medline' in v else '')
-        jf['in_pmc'] = jf['tags'].map(lambda v: '\u2714' if 'PMC' in v else '')
-    else:
-        jf['is_open'] = jf['is_oa'].map(lambda v: '\u2714' if v else '')
-        jf['in_medline'] = jf['in_medline'].map(lambda v: '\u2714' if v else '')
-        jf['in_pmc'] = jf['in_pmc'].map(lambda v: '\u2714' if v else '')
+        jf['in_medline'] = jf['tags'].map(lambda v: True if 'Medline' in v else False)
+        jf['in_pmc'] = jf['tags'].map(lambda v: True if 'PMC' in v else False)
     jf['conf_title'] = jf['confidence'].map(partial(_get_categ_confidence, categ='title'))
     jf['conf_abstract'] = jf['confidence'].map(partial(_get_categ_confidence, categ='abstract'))
 

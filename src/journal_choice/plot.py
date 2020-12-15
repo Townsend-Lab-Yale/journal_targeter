@@ -5,6 +5,7 @@ from collections import OrderedDict
 import numpy as np
 import matplotlib as mpl
 import bokeh as bk
+from bokeh import io as bkio
 from bokeh import embed as bke
 from bokeh import models as bkm
 from bokeh import layouts as bkl
@@ -36,9 +37,16 @@ def build_bokeh_sources(jf, af, refs_df):
     jfs = jf.copy()
     for metric in METRIC_NAMES:
         jfs[f'{metric}_table'] = jfs[metric].map(
-            # lambda v: f'{v:0.1f}' if not np.isnan(v) else -1
             lambda v: round(v, 1) if not np.isnan(v) else -1
         )
+    # checkmark columns
+    jfs['is_oa_str'] = jfs['is_open'].map({True: '✔', False: '', np.nan: '?'})
+    jfs['in_ml_str'] = jfs['in_medline'].map({True: '✔', False: '', np.nan: '?'})
+    jfs['in_pmc_str'] = jfs['in_pmc'].map({True: '✔', False: '', np.nan: '?'})
+    # fill jane metric columns
+    for col in ['conf_pc', 'sim_sum', 'sim_max']:
+        jfs[col].fillna(-1, inplace=True)
+
     jfs['loc_cited'] = 'cited'
     jfs['loc_abstract'] = 'abstract'
     jfs['loc_title'] = 'title'
@@ -206,11 +214,12 @@ def plot_fit_scatter(source_j, show_plot=False, **kwargs):
 
 def _add_scatter(fig=None, source=None, **kwargs):
     """Add circle renderers for open and closed journals, inc hover + tap."""
-    cmap_oa = bkt.factor_cmap('is_open', palette=['red', 'blue'], factors=['✔', ''])
+    cmap_oa = bkt.factor_cmap('is_oa_str', palette=['red', 'blue'], factors=['✔', ''])
+    is_open = np.equal(source.data['is_open'], True)  # will interpret nan as False
     view_closed = bkm.CDSView(source=source,
-                              filters=[bkm.BooleanFilter(~source.data['is_oa'])])
+                              filters=[bkm.BooleanFilter(~is_open)])
     view_open = bkm.CDSView(source=source,
-                            filters=[bkm.BooleanFilter(source.data['is_oa'])])
+                            filters=[bkm.BooleanFilter(is_open)])
     scatter_kws = dict(size=10, color=cmap_oa, source=source)
     closed_kws = dict(legend_label='closed', fill_alpha=0.3, view=view_closed)
     open_kws = dict(legend_label='open', fill_alpha=0.6, view=view_open)
@@ -255,9 +264,9 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     })
     col_param_dict.update(metric_dict)
     col_param_dict.update({
-        'is_open': ('OA', w_sm),
-        'in_medline': ('ML', w_sm),
-        'in_pmc': ('PMC', w_sm),
+        'is_oa_str': ('OA', w_sm),
+        'in_ml_str': ('ML', w_sm),
+        'in_pmc_str': ('PMC', w_sm),
         # 'conf_title': ('cT', w_sm),
         # 'conf_abstract': ('cA', w_sm),
         'conf_pc': ('conf', w_sm),
@@ -275,14 +284,14 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
                      """target="_blank"><i class="fas fa-external-link-alt pr-1"></i></a>"""
                      """<span class="journal-cell" data-toggle="tooltip" title="<%= value %>">"""
                      """<%= value %></span>"""),
-        'is_open': bkm.widgets.StringFormatter(),
-        'in_medline': bkm.widgets.StringFormatter(),
-        'in_pmc': bkm.widgets.StringFormatter(),
+        'is_oa_str': bkm.widgets.StringFormatter(),
+        'in_ml_str': bkm.widgets.StringFormatter(),
+        'in_pmc_str': bkm.widgets.StringFormatter(),
     }
     format_dict.update({i: bkm.widgets.HTMLTemplateFormatter(
         template=f"""<span class="col-metric col-{i} """
-                 """<%= value == -1 ? 'neg-impact' : 'pos-impact' %> "><%= value %></span>""")
-        for i in metric_dict})
+                 """<%= value == -1 ? 'neg-impact' : 'pos-impact' %> "><%= Math.round(value * 10) / 10 %></span>""")
+        for i in list(metric_dict) + ['conf_pc', 'sim_sum', 'sim_max']})
     table_cols = OrderedDict({
         col: dict(width=col_param_dict[col][1],
                   formatter=format_dict.get(col,
@@ -500,9 +509,10 @@ def plot_vertical_stacked(jf, af, plot_width=500, n_journals=10):
     source = bkm.ColumnDataSource(jfs)
     source_a = bkm.ColumnDataSource(afs)
 
-    hover_cols = ['journal_name'] + list(METRIC_NAMES) + ['cited', 'conf_weight',
-                  'n_articles', 'confidence', 'sim_max', 'sims', 'pc_lower', 'is_oa']
-    tooltips = [("index", "$index")] + [(i, f"@{i}") for i in hover_cols] # ("(x,y)", "($x, $y)")]
+    hover_cols = ['journal_name'] + list(METRIC_NAMES) + \
+                 ['cited', 'conf_weight', 'n_articles', 'confidence', 'sim_max',
+                  'sims', 'pc_lower', 'is_oa_str']
+    tooltips = [("index", "$index")] + [(i, f"@{i}") for i in hover_cols]  # ("(x,y)", "($x, $y)")]
 
     p = bkp.figure(
             x_range=bkm.FactorRange(*x_factors),
