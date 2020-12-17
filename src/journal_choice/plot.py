@@ -296,9 +296,9 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
         'in_ml_str': bkm.widgets.StringFormatter(),
         'in_pmc_str': bkm.widgets.StringFormatter(),
     }
-    format_dict.update({i: _get_custom_formatter(dp=1) for i in metric_dict})
+    format_dict.update({i: _get_custom_formatter(dp=0) for i in ['sim_sum', 'sim_max']})
+    format_dict.update({i: _get_custom_formatter(dp=1) for i in list(metric_dict) + ['conf_pc']})
     format_dict.update({'prospect': _get_custom_formatter(dp=2)})
-    format_dict.update({i: _get_custom_formatter(dp=0) for i in ['conf_pc', 'sim_sum', 'sim_max']})
     table_cols = OrderedDict({
         col: dict(width=col_param_dict[col][1],
                   formatter=format_dict.get(col,
@@ -499,102 +499,6 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
         bkp.show(grid)
     # js, div = bke.components(grid)
     return grid
-
-
-def plot_vertical_stacked(jf, af, plot_width=500, n_journals=10):
-    # categ_colors = {
-    #     'cited': 'tab:green',
-    #     'title': 'tab:blue',
-    #     'abstract': 'tab:orange',
-    #     'both': 'tab:purple',
-    # }
-    factors = ['cited', 'title_only', 'abstract_only', 'both']
-    categ_colors = dict(zip(factors, bk.palettes.Colorblind4))
-    categ_hex = {i: get_color_hex(categ_colors[i]) for i in categ_colors}
-
-    jfs = jf.head(n_journals)
-    afs = af[af.jid.isin(jfs.jid)].copy()
-
-    name_var = 'abbr'
-    # jfs['x_i'] = jfs[name_var].apply(lambda v: (v, 'i'))
-    jfs['x_a'] = jfs[name_var].apply(lambda v: (v, 'a'))
-    jfs['x_s'] = jfs[name_var].apply(lambda v: (v, 's'))
-    afs['x_s'] = afs[name_var].apply(lambda v: (v, 's'))
-
-    jnames = jfs[name_var]
-    subcategs = ['a', 's']
-    x_factors = list(product(jnames, subcategs))
-    a_colors = [categ_hex[i] for i in factors]
-    # x_a = [(i, 'a') for i in jnames for atype in a_types] # [('Eurosurv', 'c'), ('Eurosurv', 'a'),...
-
-    # jfs['x_c'] = jfs[name_var].apply(lambda v: (v, 'c'))
-
-    source = bkm.ColumnDataSource(jfs)
-    source_a = bkm.ColumnDataSource(afs)
-
-    hover_cols = ['journal_name'] + list(METRIC_NAMES) + \
-                 ['cited', 'conf_weight', 'n_articles', 'confidence', 'sim_max',
-                  'sims', 'pc_lower', 'is_oa_str']
-    tooltips = [("index", "$index")] + [(i, f"@{i}") for i in hover_cols]  # ("(x,y)", "($x, $y)")]
-
-    p = bkp.figure(
-            x_range=bkm.FactorRange(*x_factors),
-            plot_width=plot_width, plot_height=500, y_range=(0, 9),
-            y_axis_label='Article count',
-            # tooltips=tooltips, y_axis_label('')
-            # title=title, x_axis_label=x_var, y_axis_label=y_var)
-        )
-    # p.xaxis.major_label_orientation = "vertical"
-    # p.xaxis.subgroup_label_orientation = "normal"
-    p.xaxis.group_label_orientation = math.pi / 2  #0.8
-    # p.xaxis.major_label_orientation = 0  #math.pi/2
-
-
-    # SIM Y AXIS
-    p.extra_y_ranges = {"ax_sim": bkm.Range1d(start=0, end=105)}
-    p.add_layout(bkm.LinearAxis(y_range_name="ax_sim", axis_label="Similarity"), 'right',)
-
-    # SIM WHISKER
-    p.add_layout(bkm.Whisker(source=source, base="x_s", upper="sim_max",
-                                   lower="sim_min", y_range_name='ax_sim'))
-    # SIM CIRCLES
-    r_a = p.circle(x=bkt.jitter('x_s', width=0.6, range=p.x_range),
-                   #jitter('day', width=0.6, range=p.y_range)
-                   y='sim_max', y_range_name='ax_sim', source=source_a,
-                   size=10, alpha=0.5,
-                   color=bkt.factor_cmap('categ', palette=a_colors, factors=factors)
-                   )
-
-    # IMPACT
-    p.extra_y_ranges.update({"ax_impact": bkm.Range1d(start=0, end=10)})
-    # p.add_layout(bkm.LinearAxis(y_range_name="ax_impact"), 'center')
-    # p.vbar('x_i', width=0.9, top='citescore', source=source, y_range_name='ax_impact')
-
-    # ARTICLE COUNTS
-    p.vbar_stack(factors, x='x_a', width=0.9, source=source,
-                 color=a_colors)  # legend_label=factors,
-    hover_cols_a = ['year', 'title', 'authors', 'a_id', 'url']
-    hover_a = bkm.HoverTool(renderers=[r_a],
-                            tooltips=[(i, f"@{i}") for i in hover_cols_a])
-    p.add_tools(hover_a)
-
-    legend_items = []
-    for factor in factors:
-        hex = categ_hex[factor]
-        r_temp = p.vbar(x=[0], width=1, bottom=0, top=[0], color=hex, visible=False)
-        legend_items.append((factor, [r_temp]))
-    legend = bkm.Legend(items=legend_items)
-
-    p.add_layout(legend, 'left')
-
-
-
-    t = bkp.show(p, notebook_handle=True)
-    return t
-
-
-def get_color_hex(color_name):
-    return mpl.colors.rgb2hex(mpl.colors.to_rgba(color_name)[:3])
 
 
 def _get_journal_factor_dict(jf):
