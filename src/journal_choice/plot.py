@@ -13,6 +13,7 @@ from bokeh import plotting as bkp
 from bokeh import transform as bkt
 
 from .metrics import METRIC_NAMES
+from .colors import CATEG_HEX
 
 _URL_NLM = "https://www.ncbi.nlm.nih.gov/nlmcatalog/@uid"
 _DEFAULT_IMPACT = "citescore"
@@ -347,12 +348,9 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
                   'text_color': '#000000', 'text_font_size': '10pt'}
     factors = ['cited', 'abstract', 'title']
     stack_factors = ['cited', 'title_only', 'abstract_only', 'both']
-    categ_colors = dict(zip(stack_factors, bk.palettes.Colorblind4))
-    categ_hex = {i: get_color_hex(categ_colors[i]) for i in categ_colors}
-    categ_hex.update({'title': categ_hex['title_only'],
-                      'abstract': categ_hex['abstract_only']})
-    a_colors = [categ_hex[i] for i in stack_factors]
-    # box_colors = [categ_hex[i] for i in factors]
+    # categ_colors = dict(zip(stack_factors, bk.palettes.Colorblind4))
+    a_colors = [CATEG_HEX[i] for i in stack_factors]
+    # box_colors = [CATEG_HEX[i] for i in factors]
 
     n_journals = source_j.data['index'].size
     plot_height = 36 * n_journals + 38
@@ -375,9 +373,9 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
         plot_width=width_m, plot_height=plot_height,
         x_axis_location="above")
     # INDIVIDUAL ARTICLE RECT GLYPHS
-    r_ac = p.rect(y='jid', x='loc_cited', color=categ_hex['cited'], width=0.95, height=0.95, fill_alpha=0.3, source=source_c)
-    r_aa = p.rect(y='jid', x='loc_abstract', color=categ_hex['abstract'], width=0.95, height=0.95, fill_alpha=0.3, source=source_a, view=view_aa)
-    r_at = p.rect(y='jid', x='loc_title', color=categ_hex['title'], width=0.95, height=0.95, fill_alpha=0.3, source=source_a, view=view_at)
+    r_ac = p.rect(y='jid', x='loc_cited', color=CATEG_HEX['cited'], width=0.95, height=0.95, fill_alpha=0.3, source=source_c)
+    r_aa = p.rect(y='jid', x='loc_abstract', color=CATEG_HEX['abstract'], width=0.95, height=0.95, fill_alpha=0.3, source=source_a, view=view_aa)
+    r_at = p.rect(y='jid', x='loc_title', color=CATEG_HEX['title'], width=0.95, height=0.95, fill_alpha=0.3, source=source_a, view=view_at)
     # OVERLAYED TEXT GLYPHS
     p.text(y='jid', x='loc_cited', text='cited', source=source_j, **text_props)
     p.text(y='jid', x='loc_abstract', text='abstract', source=source_j, **text_props)
