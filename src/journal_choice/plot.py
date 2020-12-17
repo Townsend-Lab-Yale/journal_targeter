@@ -39,6 +39,7 @@ def build_bokeh_sources(jf, af, refs_df):
     for metric in METRIC_NAMES:
         jfs[metric].fillna(-1, inplace=True)
         jfs[f'p_{metric}'].fillna(-1, inplace=True)
+        jfs[f'{metric}_str'] = jfs[metric].map(lambda v: 'unknown' if v < 0 else v)
     # checkmark columns
     jfs['is_oa_str'] = jfs['is_open'].map({True: '✔', False: '', np.nan: '?'})
     jfs['in_ml_str'] = jfs['in_medline'].map({True: '✔', False: '', np.nan: '?'})
@@ -235,7 +236,7 @@ def _add_scatter(fig=None, source=None, **kwargs):
     r1_closed = fig.circle(**closed_kws, **scatter_kws, **kwargs)
 
     tooltips = [('Journal', '@journal_name')]
-    tooltips.extend([(METRIC_NAMES[i], f'@{i}') for i in METRIC_NAMES])
+    tooltips.extend([(METRIC_NAMES[i], f'@{i + "_str"}') for i in METRIC_NAMES])
     tooltips.append(('CAT', '@CAT (@cited, @abstract, @title)'))
 
     fig.add_tools(bkm.HoverTool(renderers=[r1_open, r1_closed], tooltips=tooltips))  # , callback=cb_hover
@@ -462,7 +463,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     hover_c = bkm.HoverTool(renderers=[r_ac], tooltips=tooltips_c)
 
     impact_dict = OrderedDict({'journal_name': 'Journal'})
-    impact_dict.update(METRIC_NAMES)
+    impact_dict.update({f"{i}_str": METRIC_NAMES[i] for i in METRIC_NAMES})
     impact_dict['tags'] = 'tags'
     impact_tooltips = [(impact_dict[i], f"@{i}") for i in impact_dict]
     hover_i = bkm.HoverTool(renderers=[r_i, r_i2], tooltips=impact_tooltips)
