@@ -50,6 +50,8 @@ def build_bokeh_sources(jf, af, refs_df):
     jfs['loc_abstract'] = 'abstract'
     jfs['loc_title'] = 'title'
     jfs['ax_impact'] = jfs[_DEFAULT_IMPACT]  # redundant column for metric toggling
+    max_impact = jfs['ax_impact'].max()
+    jfs['ax_impact_na'] = (jfs[_DEFAULT_IMPACT] < 0).map({True: max_impact, False: np.nan})
     jfs['ax_match'] = jfs[_DEFAULT_MATCH]  # redundant column for suitability toggling
     jfs['prospect'] = jfs[f"p_{_DEFAULT_IMPACT}"]
     source_j = bkm.ColumnDataSource(jfs)
@@ -360,8 +362,6 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
 
     # JID / NAME TUPLES FOR Y RANGES
     jfs = source_j.to_df()  # temporary dataframe to simplify calculations
-    impact_max = jfs[_DEFAULT_IMPACT].max()
-    # n_articles_max = jfs[factors].sum(axis=1).max()
     factor_dict = _get_journal_factor_dict(jfs)
     factors_default = [tuple(i) for i in factor_dict['CAT']]
     jname_factors = bkm.FactorRange(factors=factors_default,  # bounds=(-200, 50),
@@ -384,11 +384,14 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     p.text(y='jid', x='loc_title', text='title', source=source_j, **text_props)
 
     # LEFT HAND SIDE: IMPACT
+    impact_max = jfs[_DEFAULT_IMPACT].max()
     p_l = bkp.figure(tools=TOOLS,
                      x_range=(impact_max, 0), y_range=p.y_range,
                      plot_width=width_l, plot_height=plot_height,
                      x_axis_label=METRIC_NAMES[_DEFAULT_IMPACT], x_axis_location="above")
     r_i = p_l.hbar(y='jid', height=0.4, left=0, right='ax_impact', source=source_j)
+    r_i2 = p_l.hbar(y='jid', height=1, left=0, right='ax_impact_na', source=source_j,
+                    color='whitesmoke')
 
     # WIDGETS
     # IMPACT SELECT
@@ -401,7 +404,6 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
                                  **select_kws)
     impact_js = """const option = select.value;
             const option_dict = %s;
-            const new_data = Object.assign({}, source.data);
             const impact_vals = source.data[option_dict[option]];
             var max_impact = 0;
             for (var i = 0; i < impact_vals.length; i++) {
@@ -409,7 +411,18 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
                     max_impact = impact_vals[i];
                 }
             }
+            let na_vals = [];
+            for (var i = 0; i < impact_vals.length; i++) {
+                if (impact_vals[i] < 0){
+                    na_vals.push(max_impact);
+                }
+                else {
+                    na_vals.push(0);
+                }
+            }
+            const new_data = Object.assign({}, source.data);
             new_data.ax_impact = impact_vals;
+            new_data.ax_impact_na = na_vals;
             ax[0].axis_label = option;
             xrange.start = max_impact;
             source.data = new_data;
@@ -454,7 +467,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     impact_dict.update(METRIC_NAMES)
     impact_dict['tags'] = 'tags'
     impact_tooltips = [(impact_dict[i], f"@{i}") for i in impact_dict]
-    hover_i = bkm.HoverTool(renderers=[r_i], tooltips=impact_tooltips)
+    hover_i = bkm.HoverTool(renderers=[r_i, r_i2], tooltips=impact_tooltips)
 
     a_cols_dict = {'year': 'year',
                    'title': 'title',
