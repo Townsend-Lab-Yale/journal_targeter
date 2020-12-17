@@ -53,7 +53,7 @@ def build_bokeh_sources(jf, af, refs_df):
     jfs['loc_title'] = 'title'
     jfs['ax_impact'] = jfs[_DEFAULT_IMPACT]  # redundant column for metric toggling
     max_impact = jfs['ax_impact'].max()
-    jfs['ax_impact_na'] = (jfs[_DEFAULT_IMPACT] < 0).map({True: max_impact, False: np.nan})
+    jfs['ax_impact_bg'] = (jfs[_DEFAULT_IMPACT] < 0).map({True: 'whitesmoke', False: 'white'})
     jfs['ax_match'] = jfs[_DEFAULT_MATCH]  # redundant column for suitability toggling
     jfs['prospect'] = jfs[f"p_{_DEFAULT_IMPACT}"]
     source_j = bkm.ColumnDataSource(jfs)
@@ -388,9 +388,9 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
                      x_range=(impact_max, 0), y_range=p.y_range,
                      plot_width=width_l, plot_height=plot_height,
                      x_axis_label=METRIC_NAMES[_DEFAULT_IMPACT], x_axis_location="above")
+    r_ibg = p_l.hbar(y='jid', height=1, left=0, right=impact_max, source=source_j,
+                     color='ax_impact_bg')
     r_i = p_l.hbar(y='jid', height=0.4, left=0, right='ax_impact', source=source_j)
-    r_i2 = p_l.hbar(y='jid', height=1, left=0, right='ax_impact_na', source=source_j,
-                    color='whitesmoke')
 
     # WIDGETS
     # IMPACT SELECT
@@ -413,10 +413,10 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
             let na_vals = [];
             for (var i = 0; i < impact_vals.length; i++) {
                 if (impact_vals[i] < 0){
-                    na_vals.push(max_impact);
+                    na_vals.push('whitesmoke');
                 }
                 else {
-                    na_vals.push(0);
+                    na_vals.push('white');
                 }
             }
             const new_data = Object.assign({}, source.data);
@@ -466,7 +466,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     impact_dict.update({f"{i}_str": METRIC_NAMES[i] for i in METRIC_NAMES})
     impact_dict['tags'] = 'tags'
     impact_tooltips = [(impact_dict[i], f"@{i}") for i in impact_dict]
-    hover_i = bkm.HoverTool(renderers=[r_i, r_i2], tooltips=impact_tooltips)
+    hover_i = bkm.HoverTool(renderers=[r_ibg], tooltips=impact_tooltips)
 
     a_cols_dict = {'year': 'year',
                    'title': 'title',
