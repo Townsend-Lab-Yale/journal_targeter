@@ -32,6 +32,10 @@ _DUP_FIELDS = ['DO', 'TI', 'T1']  # columns used for identifying citation dups
 _USE_TYPES = {'JOUR', 'JFULL'}  # ignore everything that isn't a journal article
 
 
+class BadRisException(Exception):
+    pass
+
+
 def _get_journal_names(df):
     """Identify journal names from parsed RIS table."""
     options = _NAME_FIELD_PREFERENCE.copy()
@@ -107,6 +111,8 @@ def identify_user_references(ris_path):
     """
     df = _read_ris_file(ris_path)
     journal_names_uniq = df.journal.unique()
+    if any([pd.isnull(i) for i in journal_names_uniq]):
+        raise BadRisException("At least one record is missing a journal name.")
     # Add matching info (uid, categ, single_match) to user refs table
     m = TM.match_titles(journal_names_uniq)
     df = df.join(m.set_index('input_title'), how='left', on='journal')
