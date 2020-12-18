@@ -10,6 +10,7 @@ from .forms import UploadForm
 from ...mapping import run_queries
 from ...plot import get_bokeh_components
 from ...demo import get_demo_data
+from ...ref_loading import BadRisException
 
 _logger = logging.getLogger(__name__)
 
@@ -88,10 +89,18 @@ def search():
 
         session['ris_name'] = ref_obj.filename
         # Send queries to Jane and build jf, af, refs_df
-        jf, af, refs_df = run_queries(
-            query_title=title, query_abstract=abstract, ris_path=tempf)
-        tempf.close()
-        fs.close()
+        try:
+            jf, af, refs_df = run_queries(
+                query_title=title, query_abstract=abstract, ris_path=tempf)
+        except BadRisException as e:
+            msg = "Invalid RIS file. Please modify and try again."
+            if str(e):
+                msg = ' '.join([msg, str(e)])
+            flash(msg)
+            return render_template('upload.html', form=form)
+        finally:
+            tempf.close()
+            fs.close()
 
         js, divs = get_bokeh_components(jf, af, refs_df)
         session['bokeh_js'] = js
