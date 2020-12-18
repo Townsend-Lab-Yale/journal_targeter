@@ -105,7 +105,7 @@ def search():
         js, divs = get_bokeh_components(jf, af, refs_df)
         session['bokeh_js'] = js
         session['bokeh_divs'] = divs
-        return redirect(url_for('.index'))
+        return redirect(url_for('.results'))
     if 'title' in session:
         form.title.data = session['title']
     if 'abstract' in session:
