@@ -132,12 +132,22 @@ def _first_non_null(title_series):
 
 def _read_ris_file(ris_data):
     """Load table of references from RIS file path."""
-    if 'readlines' in dir(ris_data):
-        entries = readris(ris_data)
-    else:
-        with open(ris_data, 'r') as bibfile:
-            entries = readris(bibfile)
-    df = pd.DataFrame.from_records(entries)
+    try:
+        if 'readlines' in dir(ris_data):
+            import codecs
+            line = ris_data.readline().encode('utf-8')
+            if line.startswith(codecs.BOM_UTF8):
+                ris_data.seek(len(codecs.BOM_UTF8))
+            else:
+                ris_data.seek(0)
+            entries = readris(ris_data)
+        else:
+            with open(ris_data, 'r', encoding='utf-8-sig') as bibfile:
+                entries = readris(bibfile)
+        df = pd.DataFrame.from_records(entries)
+    except Exception as e:
+        _logger.error(f"RIS parsing error: {e}")
+        raise BadRisException(e)
     _logger.debug(f"Loaded {len(df)} entries via RIS.")
     # RESTRICT TO JOURNAL ROWS
     skipped_types = set(df[_TYPE_COL]).difference(_USE_TYPES)
