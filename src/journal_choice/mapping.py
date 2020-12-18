@@ -166,6 +166,11 @@ def aggregate_jane_journals_articles(journals_t, journals_a, articles_t,
 
 def process_inputs(input_text=None, ris_path=None, refs_df=None):
     """Get similar journals and perform matching (user<>pubmed; JANE<>pubmed)."""
+
+    # Process user citations if refs_df not provided
+    if refs_df is None:
+        refs_df = identify_user_references(ris_path)
+
     # Get matches and scores
     journals, articles = lookup_jane(input_text)
 
@@ -174,17 +179,13 @@ def process_inputs(input_text=None, ris_path=None, refs_df=None):
     match_jane = TM.match_titles(journals.jane_name)
     journals = pd.concat([journals, match_jane], axis=1)
 
-    # Process user citations if refs_df not provided
-    if refs_df is None:
-        refs_df = identify_user_references(ris_path)
-
     return journals, articles, refs_df
 
 
 def _pick_short_journal_name(name_options):
     """Get shortest string among options, ignoring null values.
-    >>> _pick_short_journal_name(
-        ['Clinical Infectious Diseases', 'Clin Infect Dis',
+    >>> _pick_short_journal_name( \
+        ['Clinical Infectious Diseases', 'Clin Infect Dis', \
          'Clinical infectious diseases : an official publication of the Infectious Diseases Society of America'])
     'Clin Infect Dis'
     """
