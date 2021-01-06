@@ -46,22 +46,12 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
 
     jf, af = aggregate_jane_journals_articles(journals_t, journals_a,
                                               articles_t, articles_a)
-
-    # FINALIZE MASTER JOURNALS TABLE
-    # Add JID to citations table (match on uid, then name<->jane_name, then create new)
-    jid_from_uid_dict = {i[1]: i[0] for i in jf['uid'].items() if i[1] != tuple()}
-    jid_from_name_dict = {name: uid for uid, name in jf.loc[jf['uid'] == tuple(), 'jane_name'].items()}
-    jid_matches = refs_df['uid'].map(jid_from_uid_dict)
-    jid_matches = jid_matches.where(~jid_matches.isnull(), refs_df['user_journal'].map(jid_from_name_dict))
-    extra_journals = set(refs_df.loc[jid_matches.isnull(), 'user_journal'])
-    jid_from_extra_dict = {name: f"c{ind}" for ind, name in enumerate(extra_journals)}
-    jid_matches = jid_matches.where(~jid_matches.isnull(), refs_df['user_journal'].map(jid_from_extra_dict))
-    refs_df['jid'] = jid_matches
+    _add_jids_names_to_refs(refs_df, jf)  # finalize refs table
 
     # COMBINE CITED JOURNALS WITH JANE JOURNALS (-> JFM)
-    citations = refs_df[['jid', 'user_journal', 'uid']].value_counts() \
+    citations = refs_df[['jid', 'refs_name', 'uid']].value_counts() \
         .reset_index(level=[1, 2]).rename(
-            columns={0: 'cited', 'user_journal': 'refs_name'})
+            columns={0: 'cited'})
     jfm = jf.drop(['single_match'], axis=1).join(
         citations, how='outer', lsuffix='_jane', rsuffix='_refs')
     jfm.insert(0, 'uid', jfm.uid_refs.where(jfm.uid_jane.isnull(), jfm.uid_jane))
@@ -180,6 +170,33 @@ def process_inputs(input_text=None, ris_path=None, refs_df=None):
     journals = pd.concat([journals, match_jane], axis=1)
 
     return journals, articles, refs_df
+
+
+def _add_jids_names_to_refs(refs_df, jf):
+    """Add columns to refs_df (jid, refs_name)."""
+    jid_from_uid_dict = {uid: jid for jid, uid in jf['uid'].items() if uid != tuple()}
+    jid_from_name_dict = {name: jid for jid, name in jf.loc[jf['uid'] == tuple(), 'jane_name'].items()}
+    jid_matches = refs_df['uid'].map(jid_from_uid_dict)
+    jid_matches = jid_matches.where(~jid_matches.isnull(), refs_df['user_journal'].map(jid_from_name_dict))
+
+    # associate no-jid refs with 1) uid, 2) ref index
+    needs_jid = refs_df.loc[jid_matches.isnull(), 'uid']  # ref_index: uid
+    uids_without_jid = needs_jid.loc[lambda v: v != tuple()]
+    no_uid_or_jid = needs_jid.loc[lambda v: v == tuple()]
+    jid_dict = jid_matches.dropna().to_dict()
+    jid_dict.update(uids_without_jid.apply(lambda v: f'u{v}').to_dict())
+    for ind in no_uid_or_jid.index:
+        jid_dict[ind] = f"r{ind}"
+    refs_df['jid'] = refs_df.index.map(jid_dict)
+
+    # Get single refs journal name per jid
+    name_counts = refs_df['user_journal'].value_counts()
+    refs_df['name_counts'] = refs_df['user_journal'].map(name_counts)
+    single_names = refs_df.sort_values(['jid', 'name_counts', 'user_journal'],
+                                       ascending=[True, False, True])[
+        ['jid', 'user_journal']].drop_duplicates(subset='jid') \
+        .set_index('jid')['user_journal']
+    refs_df['refs_name'] = refs_df['jid'].map(single_names)
 
 
 def _pick_short_journal_name(name_options):
