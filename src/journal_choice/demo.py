@@ -74,6 +74,8 @@ def create_demo_data(title=None, abstract=None, ris_name=None,
     Returns:
         output paths ([yaml_path, pickle_path]): saved file paths.
     """
+    if file_prefix is None:
+        raise ValueError("file_prefix is required to generate {file_prefix}.yaml")
     yaml_filename = f"{file_prefix}.yaml"
     _save_inputs_yaml(title=title, abstract=abstract, ris_name=ris_name,
                       yaml_filename=yaml_filename)
