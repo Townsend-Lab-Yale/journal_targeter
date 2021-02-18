@@ -1,0 +1,71 @@
+{% filter markdown %}
+
+### <i class="fas fa-info-circle"></i> How to generate a references RIS file
+
+The following instructions address a range of common scenarios.
+
+
+##### <i class="fas fa-caret-right"></i> My references are in a Google Doc, added by the Paperpile add-on.
+
+- Bring up the Paperpile sidebar using Add-ons > Paperpile > Manage Citations.
+- Click the gear icon, then select 'Export'.
+- Under Export references, choose 'RIS' then 'Export references' to download a RIS file.
+
+
+##### <i class="fas fa-caret-right"></i> My references can be selected in a reference manager.
+
+- **Mendeley**: select the manuscript references and export with File > Export,
+  choosing RIS in format dropdown.
+- **Zotero**: If manuscript references are stored in a collection: select
+  'Export Collection...' in collection context menu; alternatively right/alt
+  click selected references and choose 'Export Items...'. Choose RIS format
+  with encoding 'UTF-8 without BOM'.
+- **EndNote**: Select all references in manuscript (found under Imported
+  References if you followed Step 2). Go to File > Export, then make the
+  following selections:
+  *Save file as type*: **Text only**;
+  *Output style*: **RefMan (RIS) Export** (find under 'Select Another Style...'
+  if necessary); tick 'Export Selected References'.
+
+
+
+##### <i class="fas fa-caret-right"></i> My references are in plain text.
+
+2. Use **anystyle.io** to convert plain text references (e.g. in the bibliography
+    section) to BibTex (\*.bib) format.
+    - Paste your references text at [https://anystyle.io/](https://anystyle.io/).
+      AnyStyle can extract metadata (journal, authors, title etc.) from a wide range
+      of bibliographic styles.
+    - In parsed output, check labels look accurate, reassigning if necessary:
+      it is important the journal is identified for each reference.
+    - Download as BibTex.
+
+3. Import BibTex file into your reference management software. If you don't have
+    reference management software installed, download [**Mendeley**](https://www.mendeley.com/downloads)
+    or [**Zotero**](https://www.zotero.org/download).
+    - **Mendeley**: create a folder ('Create Folder...' button is under My Library),
+      then with folder selected, import `bib` file with File > Import > BibTex.
+    - **Zotero**: load bib file using File > Import; under 'Options' tick "Place
+      imported collections and items into new collections"
+    - **EndNote**: Right/alt-click BIB file, and 'Open With' EndNote (as importing
+      from the EndNote interface may not work).
+
+4. Now follow the steps in "When references can be selected in a reference manager".
+
+
+##### <i class="fas fa-caret-right"></i> My references are embedded in a Word document.
+
+Note: If selecting the references in the originating reference manager is non-trivial,
+    use the steps in the previous section.
+
+- If you used Mendeley or Zotero to add the references, you can upload the doc to
+    [Reference Extractor](https://rintze.zelle.me/ref-extractor/)
+    (by [Rintze Zelle](https://rintze.zelle.me/)) which can generate a
+    RIS file for you.
+- If you used an EndNote plug-in to add references, in the EndNote toolbar of
+    Microsoft Word, go to Tools > Export Traveling Library, and create a new EndNote
+    library. When you open this library in EndNote, you can export to RIS as explained
+    in the previous section ("My references can be selected in a reference manager").
+
+
+{% endfilter %}
