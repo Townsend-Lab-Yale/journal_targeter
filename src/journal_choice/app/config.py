@@ -6,7 +6,7 @@ _logger = logging.getLogger(__name__)
 
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard to guess string'
+    SECRET_KEY = os.environ.get('SECRET_KEY') or os.urandom(16)
     SESSION_TYPE = 'filesystem'
     SESSION_FILE_DIR = os.environ.get('SESSION_FILE_DIR', os.getcwd())
     _logger.info(f"{SESSION_FILE_DIR=}")
@@ -17,7 +17,7 @@ class Config:
         ['true', 'on', '1']
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    MAIL_SUBJECT_PREFIX = '[Journals]'
+    MAIL_SUBJECT_PREFIX = '[Jot]'
     MAIL_SENDER = os.environ.get('MAIL_SENDER')
     MAIL_ADMIN = os.environ.get('MAIL_ADMIN')
 
