@@ -40,9 +40,9 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
         refs_kw = dict(ris_path=ris_path) if refs_df is None else \
             dict(refs_df=refs_df)
         journals_t, articles_t, refs_df = process_inputs(
-            input_text=query_title, **refs_kw)
+            input_text=query_title, input_type='TITLE', **refs_kw)
         journals_a, articles_a, _ = process_inputs(
-            input_text=query_abstract, refs_df=refs_df)
+            input_text=query_abstract, input_type='ABSTRACT', refs_df=refs_df)
 
     jf, af = aggregate_jane_journals_articles(journals_t, journals_a,
                                               articles_t, articles_a)
@@ -154,18 +154,28 @@ def aggregate_jane_journals_articles(journals_t, journals_a, articles_t,
     return jf, af
 
 
-def process_inputs(input_text=None, ris_path=None, refs_df=None):
-    """Get similar journals and perform matching (user<>pubmed; JANE<>pubmed)."""
+def process_inputs(input_text=None, ris_path=None, refs_df=None, input_type=None):
+    """Get similar journals and perform matching (user<>pubmed; JANE<>pubmed).
+
+    Args:
+        input_text (str): Text input for Jane.
+        ris_path (path, optional): location of RIS references file.
+        refs_df (pd.DataFrame): processed references (to pass through).
+        input_type (str): description for logging, e.g. 'abstract' or 'title'
+
+    Returns:
+        processed DataFrames of journals, articles, and references.
+    """
 
     # Process user citations if refs_df not provided
     if refs_df is None:
         refs_df = identify_user_references(ris_path)
 
     # Get matches and scores
+    _logger.info(f"Running Jane search of {input_type or 'input'} text...")
     journals, articles = lookup_jane(input_text)
 
     # Add pubmed matching info
-    _logger.info("Matching JANE titles to PubMed titles.")
     match_jane = TM.match_titles(journals.jane_name)
     journals = pd.concat([journals, match_jane], axis=1)
 
