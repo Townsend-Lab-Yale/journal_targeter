@@ -90,7 +90,7 @@ def _get_values_for_tag_options(df, tag_options=None):
     name_col_preference = [TAG_KEY_MAPPING[i] for i in tag_options
                            if i in TAG_KEY_MAPPING]
     column_options = [i for i in df.columns if i in name_col_preference]
-    _logger.debug(f"Column options: {column_options}.")
+    # _logger.debug(f"Column options: {column_options}.")
     return df[column_options].apply(_first_non_null, axis=1)
 
 
@@ -109,6 +109,7 @@ def identify_user_references(ris_path):
             volume, number, start_page, end_page, doi, url, and others...
         ...
     """
+    _logger.info(f"Loading references from {ris_path}.")
     df = _read_ris_file(ris_path)
     journal_names_uniq = df.journal.unique()
     if any([pd.isnull(i) for i in journal_names_uniq]):
