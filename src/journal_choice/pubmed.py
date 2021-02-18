@@ -31,7 +31,7 @@ META_PATH = os.path.join(DATA_DIR, 'meta.pickle.gz')
 URL_ESUMMARY = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi'
 URL_ESEARCH = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi'
 load_dotenv(find_dotenv())  # for NCBI API KEY
-ESUMMARY_PATH = os.environ.get('ESUMMARY_PATH')
+# ESUMMARY_PATH = os.environ.get('ESUMMARY_PATH')
 UID_DICT_PATH = os.path.join(DATA_DIR, 'uid_dict.pickle')
 TM = None  # will hold matching functions and data
 TM_PICKLE_PATH = os.path.join(DATA_DIR, 'tm.pickle.gz')
@@ -64,7 +64,7 @@ class TitleMatcher:
         self.abbrv_uid_dict = None
 
         if use_pickle and os.path.exists(TM_PICKLE_PATH):
-            _logger.info('loading from TM pickle')
+            _logger.debug('loading from TM pickle')
             self._init_from_pickle()
         else:
             self.refresh_matching_data()
@@ -181,7 +181,7 @@ class TitleMatcher:
             _logger.debug(f"Failed to generate unique match for {n_nonsingle} titles: "
                          f"{unmatched=}, {multiple_match=}.")
         else:
-            _logger.debug("Uniquely matched all titles")
+            _logger.debug("Uniquely matched all titles.")
         return match
 
     def get_uids_from_title(self, user_title):

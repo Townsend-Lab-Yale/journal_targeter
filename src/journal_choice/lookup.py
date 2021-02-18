@@ -10,8 +10,6 @@ import pandas as pd
 import zeep
 
 import logging
-logging.basicConfig(format='%(levelname)s: %(message)s',  # %(asctime)-15s
-                    level=logging.INFO, stream=sys.stdout)
 
 JANE_URL = "https://jane.biosemantics.org/suggestions.php"
 WSDL_URL = "http://jane.biosemantics.org:8080/JaneServer/services/JaneSOAPServer?wsdl"
@@ -27,7 +25,7 @@ class ApiClient:
     @property
     def client(self):
         if self._client is None:
-            _logger.info("Creating Jane API client connection.")
+            _logger.debug("Creating Jane API client connection.")
             self._client = zeep.Client(WSDL_URL)
         return self._client
 
