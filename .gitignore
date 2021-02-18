@@ -1,8 +1,7 @@
 .env
 .env.*
-data/scopus
 notebooks/
-data/
+data_sgg/
 */.ipynb_checkpoints
 
 # Temporary and binary files
