@@ -101,7 +101,7 @@ def get_queries_from_yaml(yaml_path):
         raise FileNotFoundError('Invalid query YAML path.')
     with open(yaml_path, 'r') as infile:
         query_dict = yaml.load(infile, yaml.SafeLoader)
-    _logger.info(f"Inputs:\n{pprint.pformat(query_dict)}.")
+    _logger.info(f"Inputs:\n{pprint.pformat(query_dict, sort_dicts=False)}.")
     assert not {'title', 'abstract'}.difference(set(query_dict.keys())), \
         "Keys must be title, abstract"
     return query_dict
