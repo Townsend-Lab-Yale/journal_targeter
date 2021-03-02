@@ -106,8 +106,8 @@ def search():
         session['bokeh_js'] = js
         session['bokeh_divs'] = divs
         return redirect(url_for('.results'))
-    if 'title' in session:
-        form.title.data = session['title']
-    if 'abstract' in session:
-        form.abstract.data = session['abstract']
+    # if 'title' in session:
+    #     form.title.data = session['title']
+    # if 'abstract' in session:
+    #     form.abstract.data = session['abstract']
     return render_template('upload.html', form=form)
