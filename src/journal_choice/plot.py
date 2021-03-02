@@ -77,12 +77,12 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
     plot_width, plot_height = 800, 400
     default_metric_label = METRIC_NAMES[_DEFAULT_IMPACT]
     fig_kws = dict(tools=TOOLS, plot_width=plot_width, plot_height=plot_height,
-                   x_axis_label=default_metric_label, y_axis_label='Prospect',
-                   y_range=(0, 1),)
+                   y_axis_label=default_metric_label, x_axis_label='Prospect',
+                   x_range=(0, 1),)
 
     # IMPACT VS PROSPECT FIGURE (p1)
     p1 = bkp.figure(**fig_kws)
-    impact_kws = dict(x='ax_impact', y='prospect')
+    impact_kws = dict(y='ax_impact', x='prospect')
     _add_scatter(fig=p1, source=source_j, **impact_kws)
 
     # WIDGETS
@@ -109,7 +109,7 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
     slider = bkm.widgets.Slider(start=0.05, end=5, value=1, step=0.05, title="Weight")
 
     select1.js_on_change('value', bkm.callbacks.CustomJS(
-        args=dict(select=select1, ax=p1.xaxis, source=source_j, slider=slider),
+        args=dict(select=select1, ax=p1.yaxis, source=source_j, slider=slider),
         code=get_prospect_js()))
     slider.js_on_change('value', bkm.CustomJS(args=dict(source=source_j, select=select1), code="""
         const new_data = Object.assign({}, source.data);
