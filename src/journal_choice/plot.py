@@ -449,7 +449,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
                                upper="sim_max", lower="sim_min",
                                line_alpha=1, line_color='gray', line_width=0.5))
     factor_cm = bkt.factor_cmap('categ', palette=a_colors, factors=stack_factors)
-    r_as = p_r.circle(y='jid',  # bkt.jitter('jid', width=0.5, range=p_r.y_range),
+    r_as = p_r.circle(y=bkt.jitter('jid', width=0.5, range=p_r.y_range),
                       x='sim_max', source=source_a,  # x_range_name='ax_sim',
                       size=10, alpha=0.5, color=factor_cm,)
     taptool = p_r.select(type=bkm.TapTool)
