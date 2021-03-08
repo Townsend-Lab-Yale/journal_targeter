@@ -343,7 +343,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     # if n_journals is None:
     #     n_journals = len(jf)
     width_l, width_m, width_r = 300, 120, 300
-    TOOLS = "ypan,ywheel_zoom,reset,tap"
+    TOOLS = ""  # "ypan,ywheel_zoom,reset,tap"
 
     text_props = {"text_align": "center", "text_baseline": "middle",
                   'text_color': '#000000', 'text_font_size': '10pt'}
@@ -493,7 +493,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     p_l.yaxis.visible = False
     p.yaxis.visible = False
     select_row = bkl.row(select1, select2)
-    grid = bkl.gridplot([[select_row], [p_l, p, p_r]], toolbar_location='left')
+    grid = bkl.gridplot([[select_row], [p_l, p, p_r]], toolbar_location=None)
 
     if show_plot:
         bkp.show(grid)
