@@ -71,6 +71,48 @@ def runserver():
     """Serve using Flask cli."""
 
 
+@cli.command()
+@click.option('--update-nlm/--skip-nlm', default=True, show_default=True,
+              help="Refresh pubmed data")
+@click.option("-s", "--scopus_path", type=click.Path(exists=True),
+              help="Scopus 'ext_list' XLSX file.")
+@click.option("-j", "--jcr_path", type=click.Path(exists=True),
+              help="JCR JSON file")
+@click.option("-n", "--ncpus", type=int, default=1, show_default=True,
+              help="Number of processes for parallel matching.")
+def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
+    """Update data sources, inc NLM, Scopus and JCR."""
+    if update_nlm:
+        from journal_choice import pubmed
+        pm_full = pubmed.load_pubmed_journals(refresh=True)
+        pubmed.TitleMatcher(pm_full)
+    if scopus_path:
+        from journal_choice import scopus
+        from journal_choice.models import RefTable, TableMatcher
+        scopsm = scopus.load_scopus_journals_reduced(scopus_path)  # 31 s
+        scop = RefTable(df=scopsm, source_name='scopus', index_is_uid=True,
+                        rename_dict={'citescore': 'CiteScore'},
+                        title_col='journal_name', issn_print='Print-ISSN',
+                        issn_online='E-ISSN', col_metrics=['CiteScore'],
+                        col_other=['is_open'])
+        tm_scop = TableMatcher(scop)
+        tm_scop.match_missing(n_processes=ncpus, save=True)
+    if jcr_path:
+        from journal_choice.helpers import load_jcr_json
+        from journal_choice.models import RefTable, TableMatcher
+        jif = load_jcr_json(jcr_path)
+        jcr_rename_dict = {'journalImpactFactor': 'Impact',
+                           'eigenFactorScore': 'EF',
+                           'articleInfluenceScore': 'AI',
+                           'normEigenFactor': 'EFn', }
+        jcr_ref = RefTable(source_name='jcr', df=jif, title_col='journalTitle',
+                           col_metrics=['Impact', 'EF', 'AI', 'EFn'],
+                           issn_col='issn', rename_dict=jcr_rename_dict,
+                           index_is_uid=False)
+        jcr_tm = TableMatcher(jcr_ref)
+        jcr_tm.match_missing(n_processes=ncpus, save=True)
+
+
 def match_data(query_yaml=None, ris_path=None, out_basename=None):
     """From search inputs, create results page and save to HTML file."""
     from .mapping import run_queries
