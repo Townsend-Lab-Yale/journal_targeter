@@ -50,3 +50,12 @@
 .pos-impact {
     font-weight: normal;
 }
+
+
+.bk-tool-icon-hover {
+    display: none;
+}
+
+.bk-tool-icon-tap-select {
+    display: none;
+}
