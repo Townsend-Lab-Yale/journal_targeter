@@ -75,6 +75,22 @@ def get_issn_comb(print_series, online_series, drop_dups=True):
         return issn_comb
 
 
+def coerce_issn_to_numeric_string(issn):
+    """
+    >>> coerce_issn_to_numeric_string('123-45678')
+    '12345678'
+    >>> coerce_issn_to_numeric_string('004-4586X')
+    '0044586X'
+    >>> coerce_issn_to_numeric_string('***-*****')
+    ''
+    """
+    if pd.isnull(issn):
+        return np.nan
+    assert (type(issn) is str), "ISSN must be a string."
+    issn = ''.join([i for i in issn if i.isnumeric() or i in {'X', 'x'}])
+    return issn.upper()
+
+
 def _get_issn_combined_str(paper, online):
     """Get ISSN string combining paper and online ISSNs.
 
