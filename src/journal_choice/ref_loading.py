@@ -11,8 +11,6 @@ from . import pubmed
 _logger = logging.getLogger(__name__)
 # _logger.setLevel('DEBUG')
 
-TM = pubmed.TM
-
 # journal name in T2 (paperpile), JF (mendeley)
 _NAME_FIELD_PREFERENCE = [
     'J1',  # periodical name user abbrev 1
@@ -115,6 +113,7 @@ def identify_user_references(ris_path):
     if any([pd.isnull(i) for i in journal_names_uniq]):
         raise BadRisException("At least one record is missing a journal name.")
     # Add matching info (uid, categ, single_match) to user refs table
+    from .reference import TM
     m = TM.match_titles(journal_names_uniq)
     df = df.join(m.set_index('input_title'), how='left', on='journal')
     # put UID column first

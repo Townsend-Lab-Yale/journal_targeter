@@ -12,11 +12,11 @@ from bokeh import layouts as bkl
 from bokeh import plotting as bkp
 from bokeh import transform as bkt
 
-from .metrics import METRIC_NAMES
 from .colors import CATEG_HEX
+from .reference import MT
 
 _URL_NLM = "https://www.ncbi.nlm.nih.gov/nlmcatalog/@uid"
-_DEFAULT_IMPACT = "citescore"
+_DEFAULT_IMPACT = "CiteScore"
 _DEFAULT_MATCH = 'sim_max'
 
 
@@ -36,7 +36,7 @@ def build_bokeh_sources(jf, af, refs_df):
     """Return source_j, source_a, source_c."""
     # JOURNALS
     jfs = jf.copy()
-    for metric in METRIC_NAMES:
+    for metric in MT.metric_list:
         jfs[metric].fillna(-1, inplace=True)
         jfs[f'p_{metric}'].fillna(-1, inplace=True)
         jfs[f'{metric}_str'] = jfs[metric].map(lambda v: 'unknown' if v < 0 else v)
@@ -73,9 +73,9 @@ def build_bokeh_sources(jf, af, refs_df):
 
 
 def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
-    TOOLS = "pan,wheel_zoom,tap,box_select,reset"
+    TOOLS = "pan,wheel_zoom,box_select,reset,tap"
     plot_width, plot_height = 800, 400
-    default_metric_label = METRIC_NAMES[_DEFAULT_IMPACT]
+    default_metric_label = _DEFAULT_IMPACT
     fig_kws = dict(tools=TOOLS, plot_width=plot_width, plot_height=plot_height,
                    y_axis_label=default_metric_label, x_axis_label='Prospect',
                    x_range=(0, 1),)
@@ -86,7 +86,7 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
     _add_scatter(fig=p1, source=source_j, **impact_kws)
 
     # WIDGETS
-    option_dict = {METRIC_NAMES[i]: i for i in METRIC_NAMES}
+    option_dict = {i: i for i in MT.metric_list}
     select_kws = dict(width=150, width_policy='fixed', margin=(5, 5, 5, 45))
     select1 = bkm.widgets.Select(title="Impact metric:",
                                  value=default_metric_label,
@@ -144,7 +144,7 @@ def plot_fit_scatter(source_j, show_plot=False, **kwargs):
     """Scatter plot: CAT vs CiteScore."""
     TOOLS = "pan,wheel_zoom,tap,box_select,reset"
     plot_width, plot_height = 400, 400
-    label_dict = METRIC_NAMES.copy()
+    label_dict = {i: i for i in MT.metric_list}
     label_dict.update({
         'CAT': 'CAT (Citations + Abstract hits + Title hits)',
         'sim_max': 'Max Similarity',
@@ -176,7 +176,7 @@ def plot_fit_scatter(source_j, show_plot=False, **kwargs):
     select_kws = dict(width=150, width_policy='fixed', margin=(5, 5, 5, 45))
     select1 = bkm.widgets.Select(title="Impact metric:",
                                  value=label_dict[_DEFAULT_IMPACT],
-                                 options=[label_dict[i] for i in METRIC_NAMES],
+                                 options=[label_dict[i] for i in MT.metric_list],
                                  **select_kws)
     select2 = bkm.widgets.Select(title="Similarity metric:",
                                  value=label_dict[_DEFAULT_MATCH],
@@ -214,7 +214,8 @@ def plot_fit_scatter(source_j, show_plot=False, **kwargs):
         code=get_select_js('ax_match', impact_changed=False)))
 
     # column = bkl.column([select1, p1])
-    grid = bkl.gridplot([[select1, select2], [p1, p2]], toolbar_location='left')
+    grid = bkl.gridplot([[select1, select2], [p1, p2]], toolbar_location='left',
+                        toolbar_options={'logo': None})
     if show_plot:
         bk.io.show(grid)
     return grid
@@ -236,7 +237,7 @@ def _add_scatter(fig=None, source=None, **kwargs):
     r1_closed = fig.circle(**closed_kws, **scatter_kws, **kwargs)
 
     tooltips = [('Journal', '@journal_name')]
-    tooltips.extend([(METRIC_NAMES[i], f'@{i + "_str"}') for i in METRIC_NAMES])
+    tooltips.extend([(i, f'@{i + "_str"}') for i in MT.metric_list])
     tooltips.append(('CAT', '@CAT (@cited, @abstract, @title)'))
 
     fig.add_tools(bkm.HoverTool(renderers=[r1_open, r1_closed], tooltips=tooltips))  # , callback=cb_hover
@@ -257,10 +258,10 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     w_xs = 30
 
     metric_dict = OrderedDict({
-        i: (METRIC_NAMES[i], w_sm) for i in METRIC_NAMES
+        i: (i, w_sm) for i in MT.metric_list
     })
-    metric_dict['citescore'] = ('CiteScore', w_md)
-    metric_dict['influence'] = ('Inf', w_sm)
+    metric_dict['CiteScore'] = ('CiteScore', w_md)
+    # metric_dict['Influence'] = ('Inf', w_sm)
     col_param_dict = OrderedDict({
         'journal_name': ('Journal', w_journal),
         'CAT': ('CAT', w_sm),
@@ -343,7 +344,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     # if n_journals is None:
     #     n_journals = len(jf)
     width_l, width_m, width_r = 300, 120, 300
-    TOOLS = ""  # "ypan,ywheel_zoom,reset,tap"
+    TOOLS = "ypan,ywheel_zoom,reset,tap"
 
     text_props = {"text_align": "center", "text_baseline": "middle",
                   'text_color': '#000000', 'text_font_size': '10pt'}
@@ -383,19 +384,22 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     p.text(y='jid', x='loc_title', text='title', source=source_j, **text_props)
 
     # LEFT HAND SIDE: IMPACT
-    impact_max = jfs[_DEFAULT_IMPACT].max()
+    impact_max_default = jfs[_DEFAULT_IMPACT].max()
+    impact_max = jfs[MT.metric_list].max().max()
     p_l = bkp.figure(tools=TOOLS,
-                     x_range=(impact_max, 0), y_range=p.y_range,
+                     x_range=(impact_max_default, 0), y_range=p.y_range,
                      plot_width=width_l, plot_height=plot_height,
-                     x_axis_label=METRIC_NAMES[_DEFAULT_IMPACT], x_axis_location="above")
+                     x_axis_label=_DEFAULT_IMPACT, x_axis_location="above")
     r_ibg = p_l.hbar(y='jid', height=1, left=0, right=impact_max, source=source_j,
                      color='ax_impact_bg')
     r_i = p_l.hbar(y='jid', height=0.4, left=0, right='ax_impact', source=source_j)
+    taptool_impact = p_l.select(type=bkm.TapTool)
+    taptool_impact.callback = bkm.OpenURL(url=_URL_NLM)
 
     # WIDGETS
     # IMPACT SELECT
-    metric_options = {METRIC_NAMES[i]: i for i in METRIC_NAMES}
-    default_metric_label = METRIC_NAMES[_DEFAULT_IMPACT]
+    metric_options = {i: i for i in MT.metric_list}
+    default_metric_label = _DEFAULT_IMPACT
     select_kws = dict(width=100, width_policy='fixed', margin=(5, 5, 5, 15))
     select1 = bkm.widgets.Select(title="Impact metric:",
                                  value=default_metric_label,
@@ -463,7 +467,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     hover_c = bkm.HoverTool(renderers=[r_ac], tooltips=tooltips_c)
 
     impact_dict = OrderedDict({'journal_name': 'Journal'})
-    impact_dict.update({f"{i}_str": METRIC_NAMES[i] for i in METRIC_NAMES})
+    impact_dict.update({f"{i}_str": i for i in MT.metric_list})
     impact_dict['tags'] = 'tags'
     impact_tooltips = [(impact_dict[i], f"@{i}") for i in impact_dict]
     hover_i = bkm.HoverTool(renderers=[r_ibg], tooltips=impact_tooltips)
@@ -503,7 +507,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
 
 def _get_journal_factor_dict(jf):
     """Create dictionary of sorting name -> factor range."""
-    metric_col_dict = {METRIC_NAMES[i]: i for i in METRIC_NAMES}
+    metric_col_dict = {i: i for i in MT.metric_list}
     sort_dict = OrderedDict({'CAT': ['CAT', 'sim_sum']})
     for metric_name in metric_col_dict:
         sort_dict[metric_name] = [metric_col_dict[metric_name], 'sim_sum']

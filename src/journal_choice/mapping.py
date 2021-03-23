@@ -11,6 +11,7 @@ import pandas as pd
 from . import metrics
 from .ref_loading import identify_user_references
 from .lookup import lookup_jane
+from .reference import MT, TM
 from .helpers import get_issn_comb
 
 _logger = logging.getLogger(__name__)
@@ -66,7 +67,7 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
         jfm[col] = jfm[col].fillna(0).astype(int)
     jfm['CAT'] = jfm['cited'] + jfm['abstract'] + jfm['title']
     # ADD PROSPECT
-    for impact_col in metrics.METRIC_NAMES:
+    for impact_col in MT.metric_list:
         jfm[f'p_{impact_col}'] = jfm['CAT'] / (jfm['CAT'] + jfm[impact_col])
 
     jfm = jfm.sort_values(['CAT', 'sim_sum'], ascending=False).reset_index()  # type: pd.DataFrame
@@ -76,16 +77,16 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
         [r['jane_name'], r['refs_name'], r['main_title']]), axis=1))
 
     # Add short abbreviation for journals
-    abbrv = jfm['uid'].map(TM.pm['abbr'])
+    abbrv = jfm['uid'].map(MT.df['abbr'])
     jfm['abbr'] = abbrv.where(~abbrv.isnull(), jfm['journal_name'])
     jfm['abbr'] = jfm['abbr'].apply(lambda v: _get_short_str(v))
 
     # Fill is_open and in_medline from pm (partial via Jane)
-    is_open = jfm['uid'].map(TM.pm['is_open'])
+    is_open = jfm['uid'].map(MT.df['is_open'])
     is_open = is_open.where(jfm['is_oa'].isnull(), jfm['is_oa'])
     jfm['is_open'] = is_open
     jfm.drop(columns=['is_oa'], inplace=True)
-    in_medline = jfm['uid'].map(TM.pm['in_medline'])
+    in_medline = jfm['uid'].map(MT.df['in_medline'])
     in_medline = in_medline.where(jfm['in_medline'].isnull(), jfm['in_medline'])
     jfm['in_medline'] = in_medline
 
@@ -250,8 +251,8 @@ def _concat_jane_data(journals_t, journals_a, articles_t, articles_a):
 
 
 def _add_metrics_and_main_title(df):
-    use_pm_cols = ['main_title'] + [i for i in metrics.METRIC_NAMES if i != 'influence']
-    out = df.join(TM.pm[use_pm_cols], how='left', on='uid')
+    use_pm_cols = ['main_title'] + [i for i in MT.metric_list if i != 'influence']
+    out = df.join(MT.df[use_pm_cols], how='left', on='uid')
     return out
 
 

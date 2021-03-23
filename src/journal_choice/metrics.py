@@ -10,8 +10,6 @@ from . import METRICS_DIR
 
 _logger = logging.getLogger(__name__)
 
-METRIC_NAMES = OrderedDict()  # auto-populated. column name -> display name
-
 
 def save_metric_map(uid_dict=None, metric_df=None, metric_col_map=None,
                     metric_basename=None):
@@ -59,22 +57,3 @@ def add_metrics_to_pm(pm):
         pm.drop(col_overlap, axis=1, inplace=True)
         pm = pm.join(ref[metric_cols], how='left')
     return pm
-
-
-def update_metric_list():
-    """Read reference metric files and identify metric columns."""
-    global METRIC_NAMES
-    metrics_paths = glob.glob(os.path.join(METRICS_DIR, '*.tsv'))
-    metric_list = []
-    for path in metrics_paths:
-        with open(path, 'r') as infile:
-            line = infile.readline()
-            metrics = line.strip().split('\t')[2:]
-            metric_list.extend(metrics)
-    METRIC_NAMES.clear()
-    METRIC_NAMES.update({i: i.title() for i in metric_list})
-    METRIC_NAMES['citescore'] = 'CiteScore'
-    METRIC_NAMES['influence'] = 'Influence'
-
-
-update_metric_list()
