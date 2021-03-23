@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import logging
 import unicodedata
 from itertools import zip_longest
@@ -42,6 +43,7 @@ def get_clean_lowercase(s: str):
 
 def get_issn_safe(issn_series):
     """Get ISSN values with duplicates replaced by nan."""
+    issn_series = issn_series.str.replace('-', '').copy()
     illegal_lengths = set(issn_series.apply(len).value_counts().index)\
         .difference({0, 8})
     has_illegal_length = issn_series.apply(len).isin(illegal_lengths)
@@ -121,3 +123,15 @@ def get_queries_from_yaml(yaml_path):
     assert not {'title', 'abstract'}.difference(set(query_dict.keys())), \
         "Keys must be title, abstract"
     return query_dict
+
+
+def load_jcr_json(json_path):
+    """Create dataframe from JCR json."""
+    with open(json_path, 'r') as infile:
+        jcr = json.load(infile)
+    jif = pd.DataFrame.from_records(jcr['data'])
+    use_cols = ['journalTitle', 'issn', 'journalImpactFactor', 'eigenFactorScore', 'articleInfluenceScore', 'normEigenFactor']
+    jif = jif[use_cols].drop_duplicates(keep=False)
+    assert(jif['journalTitle'].value_counts().max() == 1), "Some journal names are duplicated."  # TEST names are not duplicated
+    jif = jif.applymap(lambda v: np.nan if v == -999.999 else v)
+    return jif
