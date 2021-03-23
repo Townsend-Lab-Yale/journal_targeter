@@ -4,7 +4,6 @@ Data via https://www.scopus.com/sources ('source titles only', sign in required)
 """
 import os
 import re
-import json
 import time
 import logging
 
@@ -13,42 +12,16 @@ import pandas as pd
 
 from . import DATA_DIR
 from .helpers import get_issn_safe, get_issn_comb, get_clean_lowercase
-from .mapping import lookup_uids_from_title_issn
 
 
 SCOPUS_XLSX_PATH = os.environ.get('SCOPUS_XLSX_PATH')
-SCOPUS_PICKLE_PATH = os.path.join(DATA_DIR, 'scopus.pickle.gz')
 CITESCORE_YEAR = None  # Automatically identified from column names in sources file
-SCOP = None  # will be populated with reduced scopus table
 
 _logger = logging.getLogger(__name__)
 
 
 class ColumnException(Exception):
     pass
-
-
-def load_new_scopus_data_file(n_processes=None, store=True):
-    """Load Excel file and match to pubmed titles, updating SCOP table."""
-    df = load_scopus_journals_reduced()
-    if not n_processes:
-        n_processes = os.environ.get('N_MATCH_PROCESSES', 3)
-    match = lookup_uids_from_title_issn(titles=df['journal_name'],
-                                        issn_print=df['Print-ISSN'],
-                                        issn_online=df['E-ISSN'],
-                                        n_processes=n_processes)
-    # Add final UID to Scopus table
-    df.rename(columns={'journal_name': 'journal_scopus'}, inplace=True)
-    df['uid'] = match['uid'].values
-    match.index = df.index
-    if store:
-        global SCOP
-        use_columns = ['scopus_id', 'uid', 'journal_scopus', 'is_open', 'citescore']
-        scopus_sm = df.reset_index()[use_columns].dropna(subset=['uid']).set_index('uid')
-        SCOP = scopus_sm
-        scopus_sm.to_pickle(SCOPUS_PICKLE_PATH)
-        _logger.info(f"Scopus table updated and written to {SCOPUS_PICKLE_PATH}.")
-    return df, match
 
 
 def load_scopus_journals_full(scopus_xlsx_path=SCOPUS_XLSX_PATH):
@@ -61,8 +34,12 @@ def load_scopus_journals_full(scopus_xlsx_path=SCOPUS_XLSX_PATH):
         pd.DataFrame
     """
     global CITESCORE_YEAR
+    _logger.info("Loading Scopus data from %s.", scopus_xlsx_path)
+    time_start = time.perf_counter()
     df = pd.read_excel(scopus_xlsx_path,
                        dtype={'Print-ISSN': str, 'E-ISSN': str})
+    time_end = time.perf_counter()
+    _logger.info("Finished loading scopus data in %.1f seconds", time_end - time_start)
     # sheet_name='Scopus Sources September 2019'
     df.columns = [i.replace('\n', ' ').replace('  ', ' ').strip() for i in df.columns]
     # COLUMN IDENTIFICATION
@@ -112,8 +89,8 @@ def load_scopus_journals_reduced(scopus_xlsx_path=SCOPUS_XLSX_PATH):
                  'publisher',
                  'imprints',
                  ]
-    _logger.info(f"Loading Scopus data from {scopus_xlsx_path}.")
     df = load_scopus_journals_full(scopus_xlsx_path)
+    _logger.debug(f"Processing Scopus columns.")
     dfs = df.loc[df['Active or Inactive'] == 'Active', keep_cols].copy()
     dfs['journal_name'] = dfs['journal_name'].str.strip()
     dup_titles = (dfs['journal_name'].value_counts() > 1) \
@@ -139,11 +116,3 @@ def _identify_column(substring_lower, columns):
     if len(match_cols) != 1:
         raise ColumnException(f"No column with {substring_lower} in name.")
     return match_cols[0]
-
-
-if not os.path.exists(SCOPUS_PICKLE_PATH):
-    _logger.info("Building and matching scopus data, and saving to pickle.")
-    load_new_scopus_data_file()
-else:
-    _logger.info("Loading scopus data from pickle.")
-    SCOP = pd.read_pickle(SCOPUS_PICKLE_PATH)
