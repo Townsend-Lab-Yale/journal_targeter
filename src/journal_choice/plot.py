@@ -134,7 +134,8 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
         source.data = new_data;
     """ % option_dict))
 
-    grid = bkl.gridplot([[bkl.row(select1, slider)], [p1]], toolbar_location='left')
+    grid = bkl.gridplot([[bkl.row(select1, slider)], [p1]],
+                        toolbar_location='left', toolbar_options={'logo': None})
     if show_plot:
         bk.io.show(grid)
     return grid
@@ -142,7 +143,7 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
 
 def plot_fit_scatter(source_j, show_plot=False, **kwargs):
     """Scatter plot: CAT vs CiteScore."""
-    TOOLS = "pan,wheel_zoom,tap,box_select,reset"
+    TOOLS = "pan,wheel_zoom,box_select,reset"
     plot_width, plot_height = 400, 400
     label_dict = {i: i for i in MT.metric_list}
     label_dict.update({
