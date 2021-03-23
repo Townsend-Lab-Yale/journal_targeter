@@ -17,7 +17,7 @@ dependencies:
   - jupyterlab
   - jupyter_nbextensions_configurator
   - beautifulsoup4
-  - bokeh=2.1.1
+  - bokeh
   - lxml
   - matplotlib
   - xlrd
@@ -36,9 +36,12 @@ dependencies:
   - sphinx
   - zeep
   - flask-markdown
+  - openpyxl
   - pip:
       - iso4
       - RISparser
       - bootstrap-flask
+      - dominate
+      - visitor
       - Flask-Session
       - pytest-check
