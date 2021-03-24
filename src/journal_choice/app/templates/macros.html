@@ -1,0 +1,10 @@
+{% macro jane_form_inputs(form_id, query) %}
+<form method="post" id={{ form_id }} action="https://jane.biosemantics.org/suggestions.php" target="_blank">
+    <label><input name="text" type="hidden" value="{{ query }}"></label>
+    <label><input name="languageCount" type="hidden" value="7"></label>
+    <label><input name="typeCount" type="hidden" value="19"></label>
+    <label><input name="openaccess" type="hidden" value="no preference"></label>
+    <label><input name="pubmedcentral" type="hidden" value="no preference"></label>
+    <label><input name="findJournals" type="hidden" value="Find journals"></label>
+</form>
+{% endmacro %}

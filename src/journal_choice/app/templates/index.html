@@ -61,19 +61,37 @@
             <div class="card border-light">
               <div class="card-header" id="inputs-header">
                 <h5 class="mb-0">
-                  <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#inputs-collapse"
-                          aria-expanded="false" aria-controls="inputs-collapse">
+                  <button class="btn btn-link" data-toggle="collapse" data-target="#inputs-collapse"
+                          aria-expanded="true" aria-controls="inputs-collapse">
                     Inputs
                   </button>
                 </h5>
               </div>
-              <div id="inputs-collapse" class="collapse" aria-labelledby="inputs-header" data-parent="#accordion">
+              <div id="inputs-collapse" class="collapse show" aria-labelledby="inputs-header" data-parent="#accordion">
                   <div class="card-body">
                     <div id="input-summary">
-{#                      <div><span class="small text-muted">Your inputs:</span></div>#}
-                      <p class="text-dark font-weight-bold mb-0">{{ query_title }}</p>
+                      <p class="text-dark font-weight-bold">{{ query_title }}</p>
                       <p class="text-sm text-justify small font-weight-light">{{ query_abstract }}</p>
-                      <p class="text-dark mb-0">References file: {{ query_ris }}</p>
+
+                      <div id="ris-name-div">
+                          <label for="ris-name" class="text-muted">References file:</label>
+                          <span id="ris-name">{{ query_ris }}</span>
+                      </div>
+
+                      <div id="jane_links" class="mt-2">
+                        <div id="hidden-jane-forms" style="display: none">
+                            {% import 'macros.html' as macros %}
+                            {{ macros.jane_form_inputs('jane-title', query_title) }}
+                            {{ macros.jane_form_inputs('jane-abstract', query_abstract) }}
+                        </div>
+{#                        <span><i class="fas fa-external-link-alt"></i>Jane results</span>#}
+                        <label for="jane-link-buttons" class="form-label text-muted">Jane results:</label>
+                        <div id='jane-link-buttons' class="btn-group btn-group-sm" role="group" aria-label="Jane buttons">
+                            <button form='jane-title' class="btn btn-outline-secondary" type="submit"><i class="fas fa-external-link-alt mr-1"></i>Title</button>
+                            <button form='jane-abstract' class="btn btn-outline-secondary" type="submit"><i class="fas fa-external-link-alt mr-1"></i>Abstract</button>
+                        </div>
+                      </div>
+                    
                     </div>
                   </div>
                 </div>
@@ -82,13 +100,13 @@
               <div class="card border-light">
                   <div class="card-header" id="tips-header">
                     <h5 class="mb-0">
-                      <button class="btn btn-link" data-toggle="collapse" data-target="#tips-collapse"
-                              aria-expanded="true" aria-controls="tips-collapse">
+                      <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#tips-collapse"
+                              aria-expanded="false" aria-controls="tips-collapse">
                         Exploring the results
                       </button>
                     </h5>
                   </div>
-                  <div id="tips-collapse" class="collapse show" aria-labelledby="tips-header" data-parent="#accordion">
+                  <div id="tips-collapse" class="collapse" aria-labelledby="tips-header" data-parent="#accordion">
                     <div class="card-body">
 
                       {% include '_info_summary.html' %}
