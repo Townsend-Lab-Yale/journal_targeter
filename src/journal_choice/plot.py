@@ -3,6 +3,7 @@ from itertools import product
 from collections import OrderedDict
 
 import numpy as np
+import pandas as pd
 import matplotlib as mpl
 import bokeh as bk
 from bokeh import io as bkio
@@ -37,9 +38,11 @@ def build_bokeh_sources(jf, af, refs_df):
     # JOURNALS
     jfs = jf.copy()
     for metric in MT.metric_list:
-        jfs[metric].fillna(-1, inplace=True)
-        jfs[f'p_{metric}'].fillna(-1, inplace=True)
-        jfs[f'{metric}_str'] = jfs[metric].map(lambda v: 'unknown' if v < 0 else v)
+        jfs[f"{metric}_neg"] = jfs[metric].fillna(-1)
+        jfs[f'p_{metric}_neg'] = jfs[f'p_{metric}'].fillna(-1)
+        jfs[f'{metric}_str'] = jfs[metric].map(lambda v: 'unknown' if pd.isnull(v) else v)
+        _mark_dominant_journals(jfs, metric)
+
     # checkmark columns
     jfs['is_oa_str'] = jfs['is_open'].map({True: '✔', False: '', np.nan: '?'})
     jfs['in_ml_str'] = jfs['in_medline'].map({True: '✔', False: '', np.nan: '?'})
@@ -52,10 +55,14 @@ def build_bokeh_sources(jf, af, refs_df):
     jfs['loc_abstract'] = 'abstract'
     jfs['loc_title'] = 'title'
     jfs['ax_impact'] = jfs[_DEFAULT_IMPACT]  # redundant column for metric toggling
+    jfs['dominant'] = jfs[f'dominant_{_DEFAULT_IMPACT}']
     max_impact = jfs['ax_impact'].max()
     jfs['ax_impact_bg'] = (jfs[_DEFAULT_IMPACT] < 0).map({True: 'whitesmoke', False: 'white'})
     jfs['ax_match'] = jfs[_DEFAULT_MATCH]  # redundant column for suitability toggling
     jfs['prospect'] = jfs[f"p_{_DEFAULT_IMPACT}"]
+    jfs['prospect_neg'] = jfs[f"p_{_DEFAULT_IMPACT}_neg"]
+    jfs['label_metric'] = jfs[f"label_{_DEFAULT_IMPACT}"]
+
     source_j = bkm.ColumnDataSource(jfs)
 
     # ARTICLES
@@ -82,6 +89,12 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
 
     # IMPACT VS PROSPECT FIGURE (p1)
     p1 = bkp.figure(**fig_kws)
+    labels = bkm.LabelSet(x='prospect', y='ax_impact', text='label_metric',
+                          source=source_j, x_offset=4, y_offset=2,
+                          background_fill_color='white',
+                          background_fill_alpha=0.5)
+    labels.level = 'underlay'
+    p1.add_layout(labels)
     impact_kws = dict(y='ax_impact', x='prospect')
     _add_scatter(fig=p1, source=source_j, **impact_kws)
 
@@ -98,8 +111,10 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
         const option = select.value;
         const option_dict = %s;
         const new_data = Object.assign({}, source.data);
-        new_data.prospect = source.data['p_'.concat(option_dict[option])];
+        new_data.prospect = source.data['p_'.concat(option_dict[option], '_neg')];
         new_data.ax_impact = source.data[option_dict[option]];
+        new_data.label_metric = source.data['label_'.concat(option_dict[option])];
+        new_data.dominant = source.data['dominant_'.concat(option_dict[option])];
         ax[0].axis_label = option;
         source.data = new_data;
         slider.value = 1;
@@ -259,9 +274,9 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     w_xs = 30
 
     metric_dict = OrderedDict({
-        i: (i, w_sm) for i in MT.metric_list
+        f"{i}_neg": (i, w_sm) for i in MT.metric_list
     })
-    metric_dict['CiteScore'] = ('CiteScore', w_md)
+    metric_dict['CiteScore_neg'] = ('CS', w_md)
     # metric_dict['Influence'] = ('Inf', w_sm)
     col_param_dict = OrderedDict({
         'journal_name': ('Journal', w_journal),
@@ -273,7 +288,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     })
     col_param_dict.update(metric_dict)
     col_param_dict.update({
-        'prospect': ('P', w_sm),
+        'prospect_neg': ('P', w_sm),
         'is_oa_str': ('OA', w_sm),
         'in_ml_str': ('ML', w_sm),
         'in_pmc_str': ('PMC', w_sm),
@@ -300,7 +315,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     }
     format_dict.update({i: _get_custom_formatter(dp=0) for i in ['sim_sum', 'sim_max']})
     format_dict.update({i: _get_custom_formatter(dp=1) for i in list(metric_dict) + ['conf_pc']})
-    format_dict.update({'prospect': _get_custom_formatter(dp=2)})
+    format_dict.update({'prospect_neg': _get_custom_formatter(dp=2)})
     table_cols = OrderedDict({
         col: dict(width=col_param_dict[col][1],
                   formatter=format_dict.get(col,
@@ -426,7 +441,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
             }
             const new_data = Object.assign({}, source.data);
             new_data.ax_impact = impact_vals;
-            new_data.ax_impact_na = na_vals;
+            new_data.ax_impact_bg = na_vals;
             ax[0].axis_label = option;
             xrange.start = max_impact;
             source.data = new_data;
@@ -504,6 +519,29 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
         bkp.show(grid)
     # js, div = bke.components(grid)
     return grid
+
+
+def _mark_dominant_journals(df, metric):
+    """Add 'dominant_<metric>' column to journals table."""
+
+    prob = f"p_{metric}"
+
+    def row_is_dominated(temp):
+        if pd.isnull(temp[metric]):
+            return True
+        for ind, r in df.iterrows():
+            "Does this row dominate current value."
+            if pd.isnull(r[metric]):
+                continue
+            if r[metric] > temp[metric] and r[prob] > temp[prob]:
+                return True
+            """Only keep one duplicate m, p."""
+        return False
+
+    is_dominated = df.apply(row_is_dominated, axis=1)
+    is_dominant = ~is_dominated
+    df[f'dominant_{metric}'] = is_dominant
+    df[f'label_{metric}'] = df['abbr'].where(is_dominant, '')
 
 
 def _get_journal_factor_dict(jf):
