@@ -56,8 +56,8 @@ def build_bokeh_sources(jf, af, refs_df):
     jfs['loc_title'] = 'title'
     jfs['ax_impact'] = jfs[_DEFAULT_IMPACT]  # redundant column for metric toggling
     jfs['dominant'] = jfs[f'dominant_{_DEFAULT_IMPACT}']
-    max_impact = jfs['ax_impact'].max()
-    jfs['ax_impact_bg'] = (jfs[_DEFAULT_IMPACT] < 0).map({True: 'whitesmoke', False: 'white'})
+    jfs['ax_impact_bg'] = (jfs[_DEFAULT_IMPACT].isnull()).map({True: 'whitesmoke', False: 'white'})
+    jfs['impact_max'] = jfs[_DEFAULT_IMPACT].max()
     jfs['ax_match'] = jfs[_DEFAULT_MATCH]  # redundant column for suitability toggling
     jfs['prospect'] = jfs[f"p_{_DEFAULT_IMPACT}"]
     jfs['prospect_neg'] = jfs[f"p_{_DEFAULT_IMPACT}_neg"]
@@ -400,13 +400,13 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     p.text(y='jid', x='loc_title', text='title', source=source_j, **text_props)
 
     # LEFT HAND SIDE: IMPACT
-    impact_max_default = jfs[_DEFAULT_IMPACT].max()
-    impact_max = jfs[MT.metric_list].max().max()
+    impact_max_initial = jfs['impact_max'].iloc[0]
+    # impact_max = jfs[MT.metric_list].max().max()
     p_l = bkp.figure(tools=TOOLS,
-                     x_range=(impact_max_default, 0), y_range=p.y_range,
+                     x_range=(impact_max_initial, 0), y_range=p.y_range,
                      plot_width=width_l, plot_height=plot_height,
                      x_axis_label=_DEFAULT_IMPACT, x_axis_location="above")
-    r_ibg = p_l.hbar(y='jid', height=1, left=0, right=impact_max, source=source_j,
+    r_ibg = p_l.hbar(y='jid', height=1, left=0, right='impact_max', source=source_j,
                      color='ax_impact_bg')
     r_i = p_l.hbar(y='jid', height=0.4, left=0, right='ax_impact', source=source_j)
     taptool_impact = p_l.select(type=bkm.TapTool)
@@ -431,17 +431,20 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
                 }
             }
             let na_vals = [];
+            let max_vals = [];
             for (var i = 0; i < impact_vals.length; i++) {
-                if (impact_vals[i] < 0){
+                if (isNaN(impact_vals[i])){
                     na_vals.push('whitesmoke');
                 }
                 else {
                     na_vals.push('white');
                 }
+                max_vals.push(max_impact);
             }
             const new_data = Object.assign({}, source.data);
             new_data.ax_impact = impact_vals;
             new_data.ax_impact_bg = na_vals;
+            new_data.impact_max = max_vals;
             ax[0].axis_label = option;
             xrange.start = max_impact;
             source.data = new_data;
