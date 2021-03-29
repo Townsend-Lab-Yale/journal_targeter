@@ -83,18 +83,18 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
     TOOLS = "pan,wheel_zoom,box_select,reset,tap"
     plot_width, plot_height = 800, 400
     default_metric_label = _DEFAULT_IMPACT
-    fig_kws = dict(tools=TOOLS, plot_width=plot_width, plot_height=plot_height,
-                   y_axis_label=default_metric_label, x_axis_label='Prospect',
-                   x_range=(0, 1), active_scroll='wheel_zoom')
 
     # IMPACT VS PROSPECT FIGURE (p1)
-    p1 = bkp.figure(**fig_kws)
+    p1 = bkp.figure(tools=TOOLS, plot_width=plot_width, plot_height=plot_height,
+                    y_axis_label=default_metric_label, x_axis_label='Prospect',
+                    x_range=(0, 1), active_scroll='wheel_zoom')
     labels = bkm.LabelSet(x='prospect', y='ax_impact', text='label_metric',
                           source=source_j, x_offset=4, y_offset=2,
-                          background_fill_color='white',
+                          text_font_size='10pt', background_fill_color='white',
                           background_fill_alpha=0.5)
     labels.level = 'underlay'
     p1.add_layout(labels)
+    p1.toolbar.logo = None
     impact_kws = dict(y='ax_impact', x='prospect')
     _add_scatter(fig=p1, source=source_j, **impact_kws)
 
@@ -150,8 +150,7 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
         source.data = new_data;
     """ % option_dict))
 
-    grid = bkl.gridplot([[bkl.row(select1, slider)], [p1]],
-                        toolbar_location='left', toolbar_options={'logo': None})
+    grid = bkl.gridplot([[bkl.row(select1, slider)], [p1]], merge_tools=False)
     if show_plot:
         bk.io.show(grid)
     return grid
