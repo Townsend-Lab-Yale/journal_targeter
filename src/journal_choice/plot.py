@@ -16,7 +16,7 @@ from bokeh import transform as bkt
 from .colors import CATEG_HEX
 from .reference import MT
 
-_URL_NLM = "https://www.ncbi.nlm.nih.gov/nlmcatalog/@uid"
+_URL_NLM = "https://www.ncbi.nlm.nih.gov/nlmcatalog/?term=@uid[nlmid]"
 _DEFAULT_IMPACT = "CiteScore"
 _DEFAULT_MATCH = 'sim_max'
 
