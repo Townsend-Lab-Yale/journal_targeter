@@ -725,9 +725,14 @@ def _get_meta_records_from_ids(uids_batch):
     records = []  # will hold all meta records
     ids = ','.join(uids_batch)
     # CF: esummary -db nlmcatalog -mode json -id {ids} > group_uids.txt
+    api_key = os.environ.get('API_KEY', None)
+    api_kw = {'api_key': api_key} if api_key else {}
+    if not api_key:
+        _logger.info("API_KEY env variable not present. Attempting Entrez "
+                     "request without key.")
     res = requests.post(URL_ESUMMARY,
                         params=dict(db='nlmcatalog', id=ids, retmode='json',
-                                    api_key=os.environ['API_KEY']))
+                                    **api_kw))
     # test for res.status_code == 414. failure at 4154
     if res.status_code == 414:
         raise HTTPError414(f"URL too long: {len(res.url)} characters.")
