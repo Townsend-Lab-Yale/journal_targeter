@@ -267,7 +267,7 @@ class MasterTable:
         self.other_meta_list = None
 
         master = pm_full[['main_title', 'abbr', 'in_medline']].copy()
-        meta_paths = glob.glob(os.path.join(METRICS_DIR, '*_meta.tsv.gz'))
+        meta_paths = self._fetch_meta_paths(scopus_first=True)
         metric_cols = []
         other_cols = []
         for path in meta_paths:
@@ -288,6 +288,21 @@ class MasterTable:
     def _reduce_pubmed_table(pm):
         keep_cols = ['main_title', 'abbr', 'in_medline']
         return pm[keep_cols]
+
+    @staticmethod
+    def _fetch_meta_paths(scopus_first=True) -> list:
+        """Get meta paths in metrics directory. Optionally list scopus first."""
+        meta_paths = glob.glob(os.path.join(METRICS_DIR, '*_meta.tsv.gz'))
+        if scopus_first:
+            ind_scopus = 0
+            for ind, path in enumerate(meta_paths):
+                if 'scopus' in path:
+                    ind_scopus = ind
+                    break
+            if ind_scopus:
+                path_scopus = meta_paths.pop(ind_scopus)
+                meta_paths.insert(0, path_scopus)
+        return meta_paths
 
 
 if __name__ == '__main__':

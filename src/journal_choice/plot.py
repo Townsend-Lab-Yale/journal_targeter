@@ -277,7 +277,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     metric_dict = OrderedDict({
         f"{i}_neg": (i, w_sm) for i in MT.metric_list
     })
-    metric_dict['CiteScore_neg'] = ('CS', w_md)
+    metric_dict['CiteScore_neg'] = ('CiteScore', w_md)
     # metric_dict['Influence'] = ('Inf', w_sm)
     col_param_dict = OrderedDict({
         'journal_name': ('Journal', w_journal),
