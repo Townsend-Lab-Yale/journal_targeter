@@ -106,7 +106,7 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
                            'articleInfluenceScore': 'AI',
                            'normEigenFactor': 'EFn', }
         jcr_ref = RefTable(source_name='jcr', df=jif, title_col='journalTitle',
-                           col_metrics=['Impact', 'EF', 'AI', 'EFn'],
+                           col_metrics=['Impact', 'AI', 'EF', 'EFn'],
                            issn_col='issn', rename_dict=jcr_rename_dict,
                            index_is_uid=False)
         jcr_tm = TableMatcher(jcr_ref)
