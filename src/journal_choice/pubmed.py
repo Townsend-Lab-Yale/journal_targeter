@@ -337,7 +337,7 @@ class TitleMatcher:
         if ambig_uids and resolve_uid_conflicts:
             conflict_uids = set((match['uid'].value_counts() > 1).loc[lambda v: v].index.values)
             conflicts = match[match['uid'].isin(conflict_uids)].reset_index()
-            conflicts['score'] = conflicts.apply(_get_match_score, axis=1)
+            conflicts['score'] = conflicts.apply(self._get_match_score, axis=1)
             drop_indices = set()
             match_index_name = match.index.name or 'index'
             for uid, g in conflicts.groupby('uid'):
@@ -368,7 +368,7 @@ class TitleMatcher:
     def match_issns(self, issn_print: pd.Series = None, issn_online: pd.Series = None):
         # ISSN MATCHING
         issn_dict = OrderedDict()
-        df = self._get_query_table(issn_print=issn_print, issn_online=issn_online)
+        df = self._get_issn_query_table(issn_print=issn_print, issn_online=issn_online)
         if 'issn_comb' in df.columns:
             # issn_comb matching useful when issnp repeated but issnp+issno seen once
             df_issn_comb = df['issn_comb'].drop_duplicates(keep=False).reset_index()
@@ -415,12 +415,10 @@ class TitleMatcher:
         return titles[title_match | safe_match]
 
     @staticmethod
-    def _get_query_table(titles=None, issn_print=None, issn_online=None):
+    def _get_issn_query_table(issn_print=None, issn_online=None):
         # BUILD QUERY DATAFRAME
-        if titles is None or issn_print is None:
-            raise ValueError("titles and issn_print are required.")
         issn_print = [coerce_issn_to_numeric_string(i) for i in issn_print]
-        data = {'title': list(titles), 'issn_print': issn_print}
+        data = {'issn_print': issn_print}
         has_issn_online = issn_online is not None
         if has_issn_online:
             issn_online = [coerce_issn_to_numeric_string(i) for i in issn_online]
@@ -511,6 +509,19 @@ class TitleMatcher:
         with gzip.open(TM_PICKLE_PATH, 'w') as infile:
             pickle.dump(data, infile)
         _logger.info("TitleMatcher data written to pickle.")
+
+    @staticmethod
+    def _get_match_score(r: pd.Series):
+        score = 0
+        if 'issn' in r.categ:
+            score += 8
+        if r.name_method == 'exact canonical':
+            score += 4
+        elif r.name_method == 'exact safe':
+            score += 2
+        elif r.name_method != 'unmatched':
+            score += 1
+        return score
 
 
 def load_pubmed_journals(refresh: bool = False):

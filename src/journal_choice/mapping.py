@@ -337,16 +337,3 @@ def _get_agg_record_for_field_list(group_df, index_name, index_value, field_list
     for field in field_list:
         out[field] = _get_agg_str_for_field(group_df, field)
     return out
-
-
-def _get_match_score(r):
-    score = 0
-    if 'issn' in r.categ:
-        score += 8
-    if r.name_method == 'exact canonical':
-        score += 4
-    elif r.name_method == 'exact safe':
-        score += 2
-    elif r.name_method != 'unmatched':
-        score += 1
-    return score
