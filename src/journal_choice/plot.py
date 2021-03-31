@@ -118,7 +118,8 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
         ax[0].axis_label = option;
         source.data = new_data;
         slider.value = 1;
-        p.reset.emit();
+        p.x_range.reset();
+        p.y_range.reset();
         """ % option_dict
         return code
 
