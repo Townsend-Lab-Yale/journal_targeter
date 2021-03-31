@@ -111,7 +111,8 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
         const option = select.value;
         const option_dict = %s;
         const new_data = Object.assign({}, source.data);
-        new_data.prospect = source.data['p_'.concat(option_dict[option], '_neg')];
+        new_data.prospect = source.data['p_'.concat(option_dict[option])];
+        new_data.prospect_neg = source.data['p_'.concat(option_dict[option], '_neg')];
         new_data.ax_impact = source.data[option_dict[option]];
         new_data.label_metric = source.data['label_'.concat(option_dict[option])];
         new_data.dominant = source.data['dominant_'.concat(option_dict[option])];
@@ -136,18 +137,22 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
         const impact_vals = source.data[impact_col];
         const cat_vals = source.data['CAT']
         let prospects = [];
+        let prospects_neg = [];
         for (let ind = 0; ind < impact_vals.length; ind++){
             let impact = impact_vals[ind];
             if (impact >= 0){
                 let cat = cat_vals[ind];
                 let p = cat / (weight * impact + cat);
                 prospects.push(p);
+                prospects_neg.push(p);
             }
             else {
-                prospects.push(-1);
+                prospects.push(null);
+                prospects_neg.push(-1);
             }
         }
         new_data.prospect = prospects;
+        new_data.prospect_neg = prospects_neg;
         source.data = new_data;
     """ % option_dict))
 
