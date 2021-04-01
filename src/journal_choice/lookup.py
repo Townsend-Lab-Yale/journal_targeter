@@ -112,7 +112,7 @@ def fetch_jane_results_via_api(text=None):
             rec['a_id'] = f'PMID_{article.pmid}'
             rec['title'] = article.title
             rec['year'] = article.year
-            rec['url'] = f"https://pubmed.ncbi.nlm.nih.gov/{article.pmid}"
+            # rec['url'] = f"https://pubmed.ncbi.nlm.nih.gov/{article.pmid}"
             records.append(rec)
     articles = pd.DataFrame.from_records(records)
     return journals, articles

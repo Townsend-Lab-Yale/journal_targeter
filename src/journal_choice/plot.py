@@ -17,6 +17,7 @@ from .colors import CATEG_HEX
 from .reference import MT
 
 _URL_NLM = "https://www.ncbi.nlm.nih.gov/nlmcatalog/?term=@uid[nlmid]"
+_URL_PUBMED = "https://pubmed.ncbi.nlm.nih.gov/@PMID/"
 _DEFAULT_IMPACT = "CiteScore"
 _DEFAULT_MATCH = 'sim_max'
 
@@ -482,7 +483,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
                       x='sim_max', source=source_a,  # x_range_name='ax_sim',
                       size=10, alpha=0.5, color=factor_cm,)
     taptool = p_r.select(type=bkm.TapTool)
-    taptool.callback = bkm.OpenURL(url='@url')
+    taptool.callback = bkm.OpenURL(url=_URL_PUBMED)
 
     # HOVERTOOLS
     cite_cols_dict = {'use_year': 'year',
