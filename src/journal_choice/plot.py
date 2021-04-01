@@ -501,7 +501,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
     a_cols_dict = {'year': 'year',
                    'title': 'title',
                    'authors_short': 'authors',
-                   'url': 'url',
+                   # 'url': 'url',
                    'sim_max': 'sim'}
     article_tooltips = [(a_cols_dict[i], f"@{i}") for i in a_cols_dict]  # [("(x,y)", "($x, $y)")]
     hover_a = bkm.HoverTool(renderers=[r_aa, r_at], tooltips=article_tooltips)
