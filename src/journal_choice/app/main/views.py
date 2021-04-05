@@ -19,9 +19,9 @@ _logger = logging.getLogger(__name__)
 def index():
     # check for populated session
     has_results = 'bokeh_js' in session
-    title = session.get('title', None)
-    return render_template('home.html',
-                           last_title=title,
+    last_title = session.get('title', None)
+    return render_template('home.html', title='Journal Optimized Targeting',
+                           last_title=last_title,
                            )
 
 
@@ -40,7 +40,7 @@ def results():
     else:
         bokeh_divs = session['bokeh_divs']
 
-    return render_template('index.html',
+    return render_template('index.html', title='Results',
                            query_title=session['title'],
                            query_abstract=session['abstract'],
                            query_ris=session['ris_name'],
@@ -61,7 +61,7 @@ def demo(demo_prefix=None):
         from ...demo import update_demo_plot
         update_demo_plot(demo_prefix)
     data = get_demo_data(demo_prefix)
-    return render_template('index.html',
+    return render_template('index.html', title='Demo',
                            query_title=data['title'],
                            query_abstract=data['abstract'],
                            query_ris=data['ris_name'],
@@ -110,4 +110,4 @@ def search():
     #     form.title.data = session['title']
     # if 'abstract' in session:
     #     form.abstract.data = session['abstract']
-    return render_template('upload.html', form=form)
+    return render_template('upload.html', form=form, title='Search')
