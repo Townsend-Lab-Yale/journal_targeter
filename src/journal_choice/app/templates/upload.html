@@ -9,43 +9,81 @@
 
 {{super()}}
 
-    <div class="jumbotron jumbotron-fluid">
-      <div class="container">
-        <h1 class="display-4">Search form</h1>
-        <p class="lead">Enter your title, abstract and references file (in RIS format)
-            to start the matching process.</p>
-      </div>
+<div class="jumbotron jumbotron-fluid">
+  <div class="container">
+    <h1 class="display-4">Search form</h1>
+      <p class="lead">Enter your title, abstract and references file (in
+          <a data-toggle="modal" href="#help-box">RIS format</a>)
+          to start the matching process.</p>
+  </div>
+</div>
+
+<div class="container">
+
+<form action="" id="upload-form" method="post" class="form text-lg-right" enctype="multipart/form-data" role="form">
+    {{ form.hidden_tag() }}
+    <div class="form-group row required">
+        <label class="form-control-label col-lg-2" for="title-field">Your title</label>
+        <div class=" col-lg-8">
+            <textarea class="form-control" id="title-field" name="title" required type="text" value=""></textarea>
+        </div>
     </div>
+    <div class="form-group row required">
+        <label class="form-control-label col-lg-2" for="abstract-field">Your abstract</label>
+        <div class=" col-lg-8">
+            <textarea class="form-control" id="abstract-field" name="abstract" required></textarea>
+        </div>
+    </div>
+    <div class="form-group row required">
+        <div class="col-lg-2">
+        <label class="form-control-label" for="ref_file">References RIS&nbsp;file</label>
+            <span data-toggle="tooltip" data-placement="top"
+                  title="Learn how to create a RIS file.">
+                <a data-toggle="modal" href="#help-box" role="button"
+                   aria-controls="help-box" class="ml-1">
+                    <i class="fas fa-info-circle"></i>
+                </a>
+            </span>
+        </div>
+        <div class=" col-lg-8">
+            <input class="form-control-file" id="ref_file" name="ref_file" required type="file">
+        </div>
+    </div>
+    <div class="form-group row">
+        <div class="offset-lg-2 col-lg-8">
+            <input class="btn btn-primary btn-md" id="submit" name="submit" type="submit" value="Upload">
+        </div>
+    </div>
+</form>
 
-    <div class="container">
-
-
-{#{% macro render_form(form,    #}
-{#                    action="",#}
-{#                    method="post",#}
-{#                    extra_classes=None,#}
-{#                    role="form",#}
-{#                    form_type="basic",#}
-{#                    horizontal_columns=('lg', 2, 10),#}
-{#                    enctype=None,#}
-{#                    button_map={},#}
-{#                    button_style="",#}
-{#                    button_size="",#}
-{#                    id="",#}
-{#                    novalidate=False,#}
-{#                    render_kw={}) %}#}
-{{ bootstrap.render_form(
-        form, form_type='horizontal',
-        horizontal_columns=('lg', 2, 6),
-        extra_classes='text-right',
-        button_size='md'
-        ) }}
-
-    <div id="help-box">
+<div class="modal fade" id="help-box"  tabindex="-1" role="dialog" aria-labelledby="help-box-label" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="help-box-label">
+            <i class="fas fa-info-circle mr-1"></i> How to generate a references RIS file
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    <div class="modal-body">
         {% include "_help_ris.html" %}
     </div>
-
-
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
     </div>
+    </div>
+    </div>
+</div>
 
 {% endblock page_content%}
+
+{% block scripts %}
+{{ super() }}
+    <script>
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+    })
+    </script>
+{% endblock %}

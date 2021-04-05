@@ -1,3 +1,11 @@
+#upload-form #title-field {
+    min-height: 3rem;
+}
+
+#upload-form #abstract-field {
+    min-height: 8rem;
+}
+
 .journal-cell{
     font-weight: bold;
     color: black;
