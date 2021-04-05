@@ -271,7 +271,7 @@ def _get_categ_confidence(conf_str, categ):
 
 def _get_article_record(g):
     od = OrderedDict()
-    od.update(g[['jid', 'title', 'authors', 'year', 'a_id', 'url']]
+    od.update(g[['jid', 'title', 'authors', 'year', 'a_id']]
               .apply(lambda s: s.iloc[0]).to_dict())
     od['sim_max'] = g['sim'].max()
     in_title, in_abstract = [i in g['source'].values for i in ['title', 'abstract']]
