@@ -10,7 +10,6 @@ import logging
 import numpy as np
 import pandas as pd
 
-from . import DATA_DIR
 from .helpers import get_issn_safe, get_issn_comb, get_clean_lowercase
 
 

@@ -15,6 +15,15 @@ from . import logger
 
 from .app import create_app
 
+from .admin import copy_initial_data
+
+# ENSURE DOTENV VARIABLES HAVE LOADED (for gunicorn)
+if not os.getenv('FLASK_CONFIG', ''):
+    from dotenv import load_dotenv, find_dotenv
+    load_dotenv(find_dotenv())
+
+
+copy_initial_data()
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 
 
