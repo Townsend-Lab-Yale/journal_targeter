@@ -44,10 +44,6 @@ def flask_match(**kwargs):
 def cli(verbose):
     if verbose:
         logger.setLevel("DEBUG")
-    else:
-        handler = logger.handlers[0]
-        handler.setFormatter(logging.Formatter('%(message)s'))
-        handler.setLevel("WARNING")
 
 
 @cli.command()
