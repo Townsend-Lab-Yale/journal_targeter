@@ -29,10 +29,10 @@ app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 
 @app.cli.command('match')
 @click.option('-y', '--yaml', 'query_yaml',
-                required=True, type=click.Path(exists=True),
-                help='Path to YAML file with title and abstract fields.')
+              required=True, type=click.Path(exists=True),
+              help='Path to YAML file with title and abstract fields.')
 @click.option('-r', '--ris', 'ris_path', type=click.Path(exists=True),
-                help='Path to references file in RIS format.')
+              help='Path to references file in RIS format.')
 @click.option('-o', '--out_basename', default='out')
 def flask_match(**kwargs):
     """Run search and save html file."""
@@ -92,9 +92,13 @@ def runserver():
 def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
     """Update data sources, inc NLM, Scopus and JCR."""
     if update_nlm:
-        from journal_choice import pubmed
+        from . import pubmed
         pm_full = pubmed.load_pubmed_journals(refresh=True)
-        pubmed.TitleMatcher(pm_full)
+        pubmed.TitleMatcher().init_data(pm_full)  # saves pickle
+    if scopus_path or jcr_path:
+        # initialize TitleMatcher data
+        from .reference import TM
+        TM.init_data()
     if scopus_path:
         from journal_choice import scopus
         from journal_choice.models import RefTable, TableMatcher

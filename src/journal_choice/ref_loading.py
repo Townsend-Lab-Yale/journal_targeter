@@ -5,8 +5,6 @@ import pandas as pd
 from RISparser import readris
 from RISparser.config import TAG_KEY_MAPPING
 
-from . import pubmed
-
 
 _logger = logging.getLogger(__name__)
 # _logger.setLevel('DEBUG')
