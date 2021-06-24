@@ -1,5 +1,4 @@
 import os
-import sys
 import yaml
 import pickle
 import shutil
@@ -12,8 +11,6 @@ from .mapping import run_queries
 from .helpers import get_queries_from_yaml
 
 
-logging.basicConfig(format='%(levelname)s: %(message)s',  # %(asctime)-15s
-                    level=logging.INFO, stream=sys.stdout)
 _logger = logging.getLogger(__name__)
 
 
@@ -62,14 +59,15 @@ def update_demo_plot(file_prefix, use_pickle=True):
 
 
 def create_demo_data(title=None, abstract=None, ris_name=None,
-                     file_prefix=None):
+                     file_prefix=None, save_yaml=True):
     """Create inputs YAML file and data pickle for query.
 
     Args:
         title (str): Title query.
         abstract (str): Abstract query.
         ris_name (str): filename of RIS file in DEMO_DIR.
-        file_prefix: prefix for output files, for e.g. prefix.yaml, prefix.pickle.
+        file_prefix (str): prefix for output files, for e.g. prefix.yaml, prefix.pickle.
+        save_yaml (bool): save yaml file with title, abstract, ris_name.
 
     Returns:
         output paths ([yaml_path, pickle_path]): saved file paths.
@@ -77,12 +75,20 @@ def create_demo_data(title=None, abstract=None, ris_name=None,
     if file_prefix is None:
         raise ValueError("file_prefix is required to generate {file_prefix}.yaml")
     yaml_filename = f"{file_prefix}.yaml"
-    _save_inputs_yaml(title=title, abstract=abstract, ris_name=ris_name,
-                      yaml_filename=yaml_filename)
+    if save_yaml:
+        _save_inputs_yaml(title=title, abstract=abstract, ris_name=ris_name,
+                          yaml_filename=yaml_filename)
     _build_demo_pickle(yaml_filename)
 
 
-def create_demo_data_from_yaml(yaml_path, ris_path, prefix=None):
+def init_demo():
+    prefix = os.environ.get('DEMO_PREFIX', 'demo')
+    yaml_path = os.path.join(DEMO_DIR, f'{prefix}.yaml')
+    ris_path = os.path.join(DEMO_DIR, f'{prefix}.ris')
+    create_demo_data_from_yaml(yaml_path, ris_path, prefix=prefix, save_yaml=False)
+
+
+def create_demo_data_from_yaml(yaml_path, ris_path, prefix=None, save_yaml=True):
     """Use yaml file with title + abstract, ris_path to create demo example."""
     demo_dict = get_queries_from_yaml(yaml_path)
     if not os.path.exists(ris_path):
@@ -98,7 +104,7 @@ def create_demo_data_from_yaml(yaml_path, ris_path, prefix=None):
         yaml_basename = os.path.basename(yaml_path)
         prefix = os.path.splitext(yaml_basename)[0]
     _logger.info(f"Using prefix '{prefix}'.")
-    create_demo_data(file_prefix=prefix, **demo_dict)
+    create_demo_data(file_prefix=prefix, save_yaml=save_yaml, **demo_dict)
 
 
 def _build_demo_pickle(yaml_filename):
