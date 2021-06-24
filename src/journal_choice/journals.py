@@ -126,6 +126,15 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
         jcr_tm.match_missing(n_processes=ncpus, save=True)
 
 
+@cli.command()
+def build():
+    """Update data sources, inc NLM, Scopus and JCR."""
+    from .reference import init_reference_data_from_cache
+    init_reference_data_from_cache()
+    from .demo import init_demo
+    init_demo()
+
+
 def match_data(query_yaml=None, ris_path=None, out_basename=None):
     """From search inputs, create results page and save to HTML file."""
     from .mapping import run_queries
