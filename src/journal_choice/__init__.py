@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import logging
+from typing import Union
 from pkg_resources import get_distribution, DistributionNotFound
 
 try:
@@ -13,24 +14,23 @@ finally:
     del get_distribution, DistributionNotFound
 
 
-# ENSURE DOTENV VARIABLES HAVE LOADED (for gunicorn)
-if not os.getenv('FLASK_CONFIG', ''):
-    from dotenv import load_dotenv, find_dotenv
-    load_dotenv(find_dotenv())
+def _create_logger(log_level: Union[str, None] = None):
+    if log_level is None:
+        log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
+    log_level_int = getattr(logging, log_level)
 
-
-def _create_logger():
-    _logger = logging.getLogger(__name__)
-    log_level = getattr(logging, os.environ.get('LOG_LEVEL', 'INFO').upper())
-    _logger.setLevel(log_level)
     ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
+    ch.setLevel(log_level_int)
     formatter = logging.Formatter(
         fmt='%(asctime)s - %(message)s',
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     ch.setFormatter(formatter)
+
+    _logger = logging.getLogger(__name__)
     _logger.addHandler(ch)
+    _logger.setLevel(log_level_int)
+
     return _logger
 
 
