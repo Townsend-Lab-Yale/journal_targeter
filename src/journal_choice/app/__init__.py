@@ -22,5 +22,10 @@ def create_app(config_name):
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
 
+    @app.before_first_request
+    def before_first_request():
+        from ..reference import init_reference_data_from_cache
+        init_reference_data_from_cache()
+
     return app
 

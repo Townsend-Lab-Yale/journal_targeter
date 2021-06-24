@@ -1,7 +1,13 @@
 import os
+import shutil
+import logging
+from pathlib import Path
+from importlib import resources
 
-from .pubmed import TM
-from .demo import update_demo_plot
+from .paths import DATA_ROOT, METRICS_DIR, PUBMED_DIR
+
+
+_logger = logging.getLogger(__name__)
 
 
 def refresh_data(rebuild_scopus=False):

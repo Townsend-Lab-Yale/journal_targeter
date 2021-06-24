@@ -261,11 +261,14 @@ class MasterTable:
         metric_list: column names for impact metrics in df.
     """
 
-    def __init__(self, pm_full):
+    def __init__(self, pm_full: pd.DataFrame = None):
         self.df = None
         self.metric_list = None
         self.other_meta_list = None
+        if pm_full is not None:
+            self.init_data(pm_full)
 
+    def init_data(self, pm_full: pd.DataFrame = None):
         master = pm_full[['main_title', 'abbr', 'in_medline']].copy()
         meta_paths = self._fetch_meta_paths(scopus_first=True)
         metric_cols = []

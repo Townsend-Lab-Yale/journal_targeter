@@ -89,7 +89,7 @@ class TitleMatcher:
         issno_unique: Online ISSN table (nlmid, issn_online)
         issnc_unique: Combined Print+Online ISSN table (nlmid, issn_comb)
     """
-    def __init__(self, pm: pd.DataFrame = None):
+    def __init__(self):
         """Build TitleMatcher from PubMed table, if provided, or load from file.
 
         Args:
@@ -106,7 +106,9 @@ class TitleMatcher:
         self.issnp_unique = None
         self.issno_unique = None
         self.issnc_unique = None
+        self.populated = False
 
+    def init_data(self, pm: Union[pd.DataFrame, None] = None):
         if pm is not None:
             _logger.info("Building TitleMatcher dictionaries from pubmed table.")
             self._init_from_pm_full(pm)
@@ -115,18 +117,19 @@ class TitleMatcher:
             self._init_from_pickle()
         else:
             _logger.info("Building TitleMatcher from initial pubmed data.")
-            pm = self._read_initial_tsv()
+            pm = load_pubmed_journals()
+            # pm = self._read_initial_tsv()
             self._init_from_pm_full(pm)
             # raise DataNotAvailable("Pubmed table is required by TableMatcher.")
+        self.populated = True
 
-    @staticmethod
-    def _read_initial_tsv():
-        initial_tsv = os.path.join(DATA_DIR, 'pubmed', 'pubmed_tm_initial.tsv.gz')
-        pm = pd.read_csv(initial_tsv, sep='\t', lineterminator='\n',
-                         encoding='utf8', compression='gzip',
-                         dtype={'nlmid': str}).set_index('nlmid')
-        pm['alt_titles_str'].fillna('', inplace=True)
-        return pm
+    # @staticmethod
+    # def _read_initial_tsv():
+    #     pm = pd.read_csv(INITIAL_TSV, sep='\t', lineterminator='\n',
+    #                      encoding='utf8', compression='gzip',
+    #                      dtype={'nlmid': str}).set_index('nlmid')
+    #     pm['alt_titles_str'].fillna('', inplace=True)
+    #     return pm
 
     def _init_from_pm_full(self, pmf, save_file=True):
         """Generate matching data from full Pubmed journals table.
