@@ -46,15 +46,16 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv, find_dotenv
 
-from . import DATA_DIR
+from .paths import DATA_ROOT
 from .helpers import get_issn_safe, get_issn_comb, get_clean_lowercase, grouper, \
     coerce_issn_to_numeric_string
 
 
-JOURNALS_PATH = os.path.join(DATA_DIR, 'pubmed', 'J_Medline.txt')
-META_PATH = os.path.join(DATA_DIR, 'pubmed', 'meta.tsv.gz')
-NLM_UID_MAP_PATH = os.path.join(DATA_DIR, 'pubmed', 'nlmid_uid_map.tsv.gz')
-TM_PICKLE_PATH = os.path.join(DATA_DIR, 'pubmed', 'tm.pickle.gz')
+JOURNALS_PATH = os.path.join(DATA_ROOT, 'pubmed', 'J_Medline.txt')
+META_PATH = os.path.join(DATA_ROOT, 'pubmed', 'meta.tsv.gz')
+NLM_UID_MAP_PATH = os.path.join(DATA_ROOT, 'pubmed', 'nlmid_uid_map.tsv.gz')
+# INITIAL_TSV = os.path.join(DATA_ROOT, 'pubmed', 'pubmed_tm_initial.tsv.gz')
+TM_PICKLE_PATH = os.path.join(DATA_ROOT, 'pubmed', 'tm.pickle.gz')
 URL_ESUMMARY = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi'
 URL_ESEARCH = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi'
 load_dotenv(find_dotenv())  # for NCBI API KEY

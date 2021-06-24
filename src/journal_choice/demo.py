@@ -6,7 +6,7 @@ import shutil
 import logging
 import unicodedata
 
-from . import DEMO_DIR
+from .paths import DEMO_DIR
 from .plot import get_bokeh_components
 from .mapping import run_queries
 from .helpers import get_queries_from_yaml

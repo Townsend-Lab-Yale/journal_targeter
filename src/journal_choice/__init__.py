@@ -35,9 +35,3 @@ def _create_logger():
 
 
 logger = _create_logger()
-
-DATA_DIR = os.path.sep.join(__file__.split(os.path.sep)[:-3] + ['data'])
-DEMO_DIR = os.path.join(DATA_DIR, 'demo')
-METRICS_DIR = os.path.join(DATA_DIR, 'metrics')
-os.makedirs(DEMO_DIR, exist_ok=True)
-os.makedirs(METRICS_DIR, exist_ok=True)

@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from . import METRICS_DIR
+from .paths import METRICS_DIR
 
 
 _logger = logging.getLogger(__name__)

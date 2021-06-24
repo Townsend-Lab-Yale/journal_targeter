@@ -37,6 +37,7 @@ dependencies:
   - zeep
   - flask-markdown
   - openpyxl
+  - appdirs
   - pip:
       - iso4
       - RISparser
