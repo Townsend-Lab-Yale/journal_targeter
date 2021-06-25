@@ -47,7 +47,7 @@ import pandas as pd
 
 from . import paths
 from .helpers import get_issn_safe, get_issn_comb, get_clean_lowercase, grouper, \
-    coerce_issn_to_numeric_string
+    coerce_issn_to_numeric_string, get_md5
 
 
 URL_ESUMMARY = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi'
@@ -534,6 +534,15 @@ def load_pubmed_journals(refresh: bool = False):
     pm['issn_online'] = get_issn_safe(pm['ISSN (Online)'])
     pm.drop(['JrId', 'IsoAbbr', 'ISSN (Print)', 'ISSN (Online)'], axis=1, inplace=True)
     return pm
+
+
+def download_and_compare_pubmed_reference():
+    prev_md5 = None
+    if os.path.exists(paths.PM_MEDLINE_PATH):
+        prev_md5 = get_md5(paths.PM_MEDLINE_PATH)
+    _download_pubmed_reference()
+    new_md5 = get_md5(paths.PM_MEDLINE_PATH)
+    return prev_md5 == new_md5
 
 
 def _download_pubmed_reference():

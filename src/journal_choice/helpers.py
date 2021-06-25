@@ -2,6 +2,7 @@ import os
 import re
 import json
 import logging
+import hashlib
 import unicodedata
 from itertools import zip_longest
 
@@ -135,3 +136,11 @@ def load_jcr_json(json_path):
     assert(jif['journalTitle'].value_counts().max() == 1), "Some journal names are duplicated."  # TEST names are not duplicated
     jif = jif.applymap(lambda v: np.nan if v == -999.999 else v)
     return jif
+
+
+def get_md5(file_path):
+    h = hashlib.md5()
+    with open(file_path, 'rb') as infile:
+        for line in infile:
+            h.update(line)
+    return h.hexdigest()
