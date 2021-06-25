@@ -4,12 +4,13 @@ or
 `gunicorn -b 0.0.0.0:5005 -w 4 src.journal_choice.journals:app`
 """
 import os
-import sys
 import logging
+import pathlib
+from typing import Union
 
 import click
-from flask import render_template
-# from flask.cli import with_appcontext
+import dotenv
+from flask import Flask, render_template
 
 from . import paths
 from .app import create_app
@@ -18,6 +19,7 @@ from .admin import copy_initial_data, load_dotenv_as_dict
 
 copy_initial_data()
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
+_logger = logging.getLogger(__name__)
 
 
 @app.cli.command('match')
@@ -41,10 +43,10 @@ def cli(verbose):
 
 @cli.command()
 @click.option('-y', '--yaml', 'query_yaml',
-                required=True, type=click.Path(exists=True),
-                help='Path to YAML file with title and abstract fields.')
+              required=True, type=click.Path(exists=True),
+              help='Path to YAML file with title and abstract fields.')
 @click.option('-r', '--ris', 'ris_path', type=click.Path(exists=True),
-                help='Path to references file in RIS format.')
+              help='Path to references file in RIS format.')
 @click.option('-o', '--out_basename', default='out')
 def match(query_yaml=None, ris_path=None, out_basename=None):
     """Run search and save html file."""
@@ -82,8 +84,19 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
     """Update data sources, inc NLM, Scopus and JCR."""
     if update_nlm:
         from . import pubmed
-        pm_full = pubmed.load_pubmed_journals(refresh=True)
-        pubmed.TitleMatcher().init_data(pm_full)  # saves pickle
+        api_key = app.config['API_KEY']
+        if api_key:
+            _logger.info('API key present')
+        else:
+            _logger.info('API key absent')
+        medline_updated = pubmed.download_and_compare_pubmed_reference()
+        tm_pickle_exists = os.path.exists(paths.TM_PICKLE_PATH)
+        if medline_updated or not tm_pickle_exists:
+            pm_full = pubmed.load_pubmed_journals(api_key=api_key)
+            tm = pubmed.TitleMatcher().init_data(pm_full)  # type: pubmed.TitleMatcher
+            tm.save_pickle()
+        else:
+            _logger.info("No changes found in Medline journals list.")
     if scopus_path or jcr_path:
         # initialize TitleMatcher data
         from .reference import TM
