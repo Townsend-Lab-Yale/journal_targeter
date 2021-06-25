@@ -50,18 +50,9 @@ from .helpers import get_issn_safe, get_issn_comb, get_clean_lowercase, grouper,
     coerce_issn_to_numeric_string
 
 
-JOURNALS_PATH = os.path.join(DATA_ROOT, 'pubmed', 'J_Medline.txt')
-META_PATH = os.path.join(DATA_ROOT, 'pubmed', 'meta.tsv.gz')
-NLM_UID_MAP_PATH = os.path.join(DATA_ROOT, 'pubmed', 'nlmid_uid_map.tsv.gz')
-# INITIAL_TSV = os.path.join(DATA_ROOT, 'pubmed', 'pubmed_tm_initial.tsv.gz')
-TM_PICKLE_PATH = os.path.join(DATA_ROOT, 'pubmed', 'tm.pickle.gz')
 URL_ESUMMARY = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi'
 URL_ESEARCH = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi'
-load_dotenv(find_dotenv())  # for NCBI API KEY
-# ESUMMARY_PATH = os.environ.get('ESUMMARY_PATH')
-
 _logger = logging.getLogger(__name__)
-# _logger.setLevel('DEBUG')
 
 
 class HTTPError414(Exception):
@@ -111,7 +102,7 @@ class TitleMatcher:
         if pm is not None:
             _logger.info("Building TitleMatcher dictionaries from pubmed table.")
             self._init_from_pm_full(pm)
-        elif os.path.exists(TM_PICKLE_PATH):
+        elif os.path.exists(paths.TM_PICKLE_PATH):
             _logger.debug('Loading from TM pickle.')
             self._init_from_pickle()
         else:
@@ -185,7 +176,7 @@ class TitleMatcher:
             self._write_pickle()
 
     def _init_from_pickle(self):
-        with gzip.open(TM_PICKLE_PATH, 'r') as infile:
+        with gzip.open(paths.TM_PICKLE_PATH, 'r') as infile:
             data = pickle.load(infile)
         self.safe_abbrv_id_dict = data['safe_abbrv_id_dict']
         self.safe_id_dict = data['safe_id_dict']
@@ -228,7 +219,7 @@ class TitleMatcher:
             unmatched = list(match.loc[is_unmatched, 'input_title'])
             multiple_match = list(match.loc[is_multiple, 'input_title'])
             _logger.debug(f"Failed to generate unique match for {n_nonsingle} titles: "
-                         f"{unmatched=}, {multiple_match=}.")
+                          f"{unmatched=}, {multiple_match=}.")
         else:
             _logger.debug("Uniquely matched all titles.")
         return match
@@ -509,7 +500,7 @@ class TitleMatcher:
         data['issnp_unique'] = self.issnp_unique
         data['issno_unique'] = self.issno_unique
         data['issnc_unique'] = self.issnc_unique
-        with gzip.open(TM_PICKLE_PATH, 'w') as infile:
+        with gzip.open(paths.TM_PICKLE_PATH, 'w') as infile:
             pickle.dump(data, infile)
         _logger.info("TitleMatcher data written to pickle.")
 
@@ -532,10 +523,10 @@ def load_pubmed_journals(refresh: bool = False):
 
     Reload source from NCBI if refresh is True or file doesn't exist.
     """
-    if refresh or not os.path.exists(JOURNALS_PATH):
+    if not os.path.exists(paths.PM_MEDLINE_PATH):
         _download_pubmed_reference()
-    pm = pd.DataFrame.from_records(_yield_records(JOURNALS_PATH))
-    meta = _load_metadata_for_nlmids(pm.nlmid, drop_extra=True)
+    pm = pd.DataFrame.from_records(_yield_records(paths.PM_MEDLINE_PATH))
+    meta = _load_metadata_for_nlmids(pm.nlmid, drop_extra=True, api_key=api_key)
     pm.set_index('nlmid', inplace=True)
     pm = pm.join(meta[meta.is_active], how='inner')  # reduces pm to active only
     pm.rename(columns={'MedAbbr': 'abbr'}, inplace=True)
@@ -549,19 +540,19 @@ def _download_pubmed_reference():
     """Download new Pubmed reference (J_Medline.txt) via ftp to data dir."""
     medline_url = "ftp://ftp.ncbi.nih.gov/pubmed/J_Medline.txt"
     with contextlib.closing(urllib_request.urlopen(medline_url)) as r:
-        with open(JOURNALS_PATH, 'wb') as f:
+        with open(paths.PM_MEDLINE_PATH, 'wb') as f:
             shutil.copyfileobj(r, f)
-    _logger.info(f"Updated pubmed reference file from NCBI FTP ({JOURNALS_PATH}).")
+    _logger.info(f"Updated pubmed reference file from NCBI FTP ({paths.PM_MEDLINE_PATH}).")
 
 
 def _write_metadata_file(meta: pd.DataFrame):
-    meta.to_csv(META_PATH, sep='\t', compression='gzip', index=True,
+    meta.to_csv(paths.PM_META_PATH, sep='\t', compression='gzip', index=True,
                 line_terminator='\n')
-    _logger.info("Pubmed metadata written to %s", META_PATH)
+    _logger.info("Pubmed metadata written to %s", paths.PM_META_PATH)
 
 
 def _load_metadata_file() -> Union[pd.DataFrame, None]:
-    if not os.path.exists(META_PATH):
+    if not os.path.exists(paths.PM_META_PATH):
         _logger.info("No metadata path available.")
         return None
     col_type_dict = {'nlmid': str,
@@ -571,7 +562,7 @@ def _load_metadata_file() -> Union[pd.DataFrame, None]:
                      'in_medline': bool,
                      'is_active': bool,
                      }
-    meta = pd.read_csv(META_PATH, sep='\t', compression='gzip',
+    meta = pd.read_csv(paths.PM_META_PATH, sep='\t', compression='gzip',
                        dtype=col_type_dict, lineterminator='\n')
     meta['alt_titles_str'] = meta['alt_titles_str'].fillna('')
     meta.set_index('nlmid', inplace=True)
