@@ -80,12 +80,6 @@ class TitleMatcher:
         issnc_unique: Combined Print+Online ISSN table (nlmid, issn_comb)
     """
     def __init__(self):
-        """Build TitleMatcher from PubMed table, if provided, or load from file.
-
-        Args:
-            pm: PubMed reference data table, via e.g. load_pubmed_journals.
-        """
-        # self.pm = None
         self.titles = None
         self.safe_abbrv_id_dict = None
         self.safe_id_dict = None
@@ -112,16 +106,15 @@ class TitleMatcher:
             self._init_from_pm_full(pm)
             # raise DataNotAvailable("Pubmed table is required by TableMatcher.")
         self.populated = True
+        return self
 
-    # @staticmethod
-    # def _read_initial_tsv():
-    #     pm = pd.read_csv(INITIAL_TSV, sep='\t', lineterminator='\n',
-    #                      encoding='utf8', compression='gzip',
-    #                      dtype={'nlmid': str}).set_index('nlmid')
-    #     pm['alt_titles_str'].fillna('', inplace=True)
-    #     return pm
+    def save_pickle(self):
+        if not self.populated:
+            _logger.error("Attempted to save TM pickle from unpopulated object.")
+            return False
+        self._write_pickle()
 
-    def _init_from_pm_full(self, pmf, save_file=True):
+    def _init_from_pm_full(self, pmf):
         """Generate matching data from full Pubmed journals table.
 
         Args:
@@ -172,8 +165,6 @@ class TitleMatcher:
         safe_abbrv_id_dict = temp.reset_index().groupby('abbr_safe')\
             .apply(lambda g: tuple(g.nlmid.unique())).to_dict()
         self.safe_abbrv_id_dict = safe_abbrv_id_dict
-        if save_file:
-            self._write_pickle()
 
     def _init_from_pickle(self):
         with gzip.open(paths.TM_PICKLE_PATH, 'r') as infile:
