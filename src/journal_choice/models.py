@@ -306,9 +306,3 @@ class MasterTable:
                 path_scopus = meta_paths.pop(ind_scopus)
                 meta_paths.insert(0, path_scopus)
         return meta_paths
-
-
-if __name__ == '__main__':
-    from .pubmed import load_pubmed_journals
-    pm_ext = load_pubmed_journals(refresh=False)
-    mt = MasterTable(pm_ext)

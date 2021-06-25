@@ -11,6 +11,6 @@ _logger = logging.getLogger(__name__)
 
 def init_reference_data_from_cache():
     _logger.info("Loading reference data for matching and metadata lookups.")
-    pm_ext = load_pubmed_journals(refresh=False)
+    pm_ext = load_pubmed_journals()
     MT.init_data(pm_ext)
     TM.init_data()  # use existing data. priority: pickle > tsv.gz

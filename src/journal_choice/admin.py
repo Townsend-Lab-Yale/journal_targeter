@@ -4,7 +4,10 @@ import logging
 from pathlib import Path
 from importlib import resources
 
-from .paths import DATA_ROOT, METRICS_DIR, PUBMED_DIR
+import dotenv
+from flask import Flask
+
+from . import paths
 
 
 _logger = logging.getLogger(__name__)

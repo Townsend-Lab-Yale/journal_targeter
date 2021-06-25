@@ -67,7 +67,6 @@ class TitleMatcher:
     """Store NLM/pubmed metadata and dictionaries that map title variants -> UID.
 
     Attributes:
-        pm: pubmed metadata table
         titles: table of uids + title variants
 
         exact_id_dict: mixed case 'main' title -> uid
@@ -509,10 +508,10 @@ class TitleMatcher:
         return score
 
 
-def load_pubmed_journals(refresh: bool = False):
+def load_pubmed_journals(api_key: Union[str, None] = None):
     """Load table of PubMed journals, append extended metadata, drop inactive.
 
-    Reload source from NCBI if refresh is True or file doesn't exist.
+    Reload source from NCBI if file doesn't exist.
     """
     if not os.path.exists(paths.PM_MEDLINE_PATH):
         _download_pubmed_reference()
