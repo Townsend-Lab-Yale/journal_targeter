@@ -38,7 +38,91 @@ def flask_match(**kwargs):
 @click.option('--verbose/--quiet', default=False)
 def cli(verbose):
     if verbose:
-        logger.setLevel("DEBUG")
+        _logger.setLevel("DEBUG")
+
+
+@cli.group()
+def setup():
+    """Set up environment variables."""
+
+
+@setup.command('prompt')
+def config_prompt():
+    """Create configuration .env file via command prompt."""
+    env_dict = dict()
+    prev_vals = load_dotenv_as_dict().copy()
+
+    def _set_env_via_prompt(var_name, prompt_str, default=None, **prompt_kw):
+        if var_name in prev_vals:
+            default = prev_vals[var_name]
+        env_dict[var_name] = click.prompt(prompt_str, default=default, **prompt_kw)
+
+    add_api_key = click.confirm("Store an API key?", default=False)
+    if add_api_key:
+        _set_env_via_prompt('API_KEY', 'NCBI API KEY')
+    _set_env_via_prompt('FLASK_ENV', 'Environment', default='production',
+                        type=click.Choice(['development', 'production']))
+    _set_env_via_prompt('SECRET_KEY', 'Secret key (for encryption)',
+                        default=os.urandom(16).hex())
+
+    # Mail logger
+    setup_mail = click.confirm("Set up error logging to email?", default=False)
+    if setup_mail:
+        _set_env_via_prompt('MAIL_SERVER', 'Mail server (e.g. mail.example.com)')
+        _set_env_via_prompt('MAIL_SENDER', 'From address (e.g. Jot <info@example.com>)')
+        _set_env_via_prompt('MAIL_USERNAME', 'Mail username', default='')
+        _set_env_via_prompt('MAIL_PASSWORD', 'Mail password', default='')
+        _set_env_via_prompt('MAIL_PORT', 'Mail port', default=25, type=int)
+        _set_env_via_prompt('MAIL_USE_TLS', 'Use TLS', default=False)
+        _set_env_via_prompt('MAIL_ADMIN', 'Alert address (e.g. admin@example.com)')
+
+    if os.path.exists(paths.ENV_PATH):
+        msg = "OK to overwrite previous .env file with these values?"
+    else:
+        msg = "OK to create an .env file with these values?"
+    is_happy = click.confirm(msg, default=True)
+    if not is_happy:
+        click.echo("Aborting .env file creation.")
+        return
+    backup_path = _store_new_env(env_dict)
+    if backup_path:
+        click.echo(f"Previous config file saved to {backup_path}")
+
+
+@setup.command('revert')
+def config_revert():
+    """Revert to previous .env file."""
+    prev_path = _get_previous_env_path()
+    if os.path.exists(prev_path):
+        overwrite = click.confirm("Are you sure you want to restore previous env file?")
+        if overwrite:
+            os.rename(prev_path, paths.ENV_PATH)
+            click.echo("Configuration reset to previous values.")
+        else:
+            click.echo("Aborted.")
+    else:
+        click.echo("No previous configuration file found.")
+
+
+@setup.command('show')
+def config_show():
+    """Print configuration path and contents."""
+    if paths.ENV_PATH.exists():
+        click.echo(f"ENV PATH: {paths.ENV_PATH}\nContents:")
+        with open(paths.ENV_PATH, 'r') as env:
+            for line in env:
+                click.secho(line.strip(), fg='green')
+    else:
+        click.echo("No configuration file found.")
+
+
+@setup.command('edit')
+def config_edit():
+    """Open configuration .env file in an editor."""
+    if not paths.ENV_PATH.exists():
+        paths.ENV_PATH.touch()
+    click.echo(f"Opening {paths.ENV_PATH}. Edit, then save when you're done.")
+    click.launch(str(paths.ENV_PATH))
 
 
 @cli.command()
@@ -129,12 +213,14 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
 
 
 @cli.command()
-def build():
-    """Update data sources, inc NLM, Scopus and JCR."""
+def build(app: Flask):
+    """Create pubmed pickle object if needed; rebuild demo data."""
     from .reference import init_reference_data_from_cache
     init_reference_data_from_cache()
     from .demo import init_demo
-    init_demo()
+    with app.app_context():
+        demo_prefix = app.config['DEMO_PREFIX']
+    init_demo(demo_prefix)
 
 
 def match_data(query_yaml=None, ris_path=None, out_basename=None):
@@ -171,7 +257,7 @@ def deploy():
     """Run deployment tasks."""
     import shutil
     from .demo import update_demo_plot
-    update_demo_plot(os.environ.get('DEMO_PREFIX', 'demo'))
+    update_demo_plot(app.config['DEMO_PREFIX'])
     use_env = '.env.server'
     shutil.copy(use_env, '.env')
     print(f"Copied from {use_env} to .env")
@@ -193,3 +279,22 @@ def develop():
 def demo(yaml_path=None, ris_path=None, prefix=None):
     from .demo import create_demo_data_from_yaml
     create_demo_data_from_yaml(yaml_path, ris_path, prefix=prefix)
+
+
+def _store_new_env(env_dict) -> Union[None, os.PathLike]:
+    backup_path = None
+    env_path_pl = pathlib.Path(paths.ENV_PATH)
+    if env_path_pl.exists():
+        backup_path = _get_previous_env_path()
+        env_path_pl.rename(backup_path)
+    env_path_pl.parent.mkdir(exist_ok=True)
+    env_path_pl.touch()
+    for key in env_dict:
+        dotenv.set_key(env_path_pl, key, env_dict[key])
+    _logger.info("Created .env file")
+    return backup_path
+
+
+def _get_previous_env_path():
+    backup_name = os.path.basename(paths.ENV_PATH.name) + '.prev'
+    return os.path.join(paths.CONFIG_DIR, backup_name)
