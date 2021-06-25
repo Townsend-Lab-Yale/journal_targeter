@@ -1,15 +1,19 @@
 import os
 import logging
 
+import dotenv
+
+from .. import paths
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 _logger = logging.getLogger(__name__)
+dotenv.load_dotenv(paths.ENV_PATH, verbose=False)
 
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or os.urandom(16)
     SESSION_TYPE = 'filesystem'
-    SESSION_FILE_DIR = os.environ.get('SESSION_FILE_DIR', os.getcwd())
-    _logger.info(f"{SESSION_FILE_DIR=}")
+    SESSION_FILE_DIR = os.environ.get('SESSION_FILE_DIR', paths.SESSION_DIR)
     MAX_CONTENT_LENGTH = 1024 * 1024  # 1MB request size limit, for uploads
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.googlemail.com')
     MAIL_PORT = int(os.environ.get('MAIL_PORT', '587'))
