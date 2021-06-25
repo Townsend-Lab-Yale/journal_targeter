@@ -81,8 +81,8 @@ def create_demo_data(title=None, abstract=None, ris_name=None,
     _build_demo_pickle(yaml_filename)
 
 
-def init_demo():
-    prefix = os.environ.get('DEMO_PREFIX', 'demo')
+def init_demo(prefix):
+    """Create demo pickle file from inputs YAML and RIS file in demo dir."""
     yaml_path = os.path.join(DEMO_DIR, f'{prefix}.yaml')
     ris_path = os.path.join(DEMO_DIR, f'{prefix}.ris')
     create_demo_data_from_yaml(yaml_path, ris_path, prefix=prefix, save_yaml=False)

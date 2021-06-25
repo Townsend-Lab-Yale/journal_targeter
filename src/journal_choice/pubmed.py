@@ -44,9 +44,8 @@ from urllib import request as urllib_request
 import iso4
 import numpy as np
 import pandas as pd
-from dotenv import load_dotenv, find_dotenv
 
-from .paths import DATA_ROOT
+from . import paths
 from .helpers import get_issn_safe, get_issn_comb, get_clean_lowercase, grouper, \
     coerce_issn_to_numeric_string
 
@@ -579,13 +578,15 @@ def _load_metadata_file() -> Union[pd.DataFrame, None]:
     return meta
 
 
-def _load_metadata_for_nlmids(nlmids: Iterable, drop_extra: bool = False):
+def _load_metadata_for_nlmids(nlmids: Iterable, drop_extra: bool = False,
+                              api_key: Union[str, None] = None):
     """Load metadata from file and update via entrez api where necessary.
 
     Args:
         nlmids: journal NLM IDs.
         active_only: filter to current/active journals.
         drop_extra: remove non-matching nlmids in metadata file.
+        api_key: NCBI Entrez API Key (optional)
     """
     meta_prev = _load_metadata_file()
     meta_prev = meta_prev if meta_prev is not None else pd.DataFrame()
@@ -594,8 +595,8 @@ def _load_metadata_for_nlmids(nlmids: Iterable, drop_extra: bool = False):
     meta_changed = False
     if nlmids_needed:
         findme = pd.DataFrame(data={'nlmid': nlmids_needed})
-        _fill_uids(findme)
-        meta_ext_new = _build_meta_from_uids(findme['uid'])
+        _fill_uids(findme, api_key=api_key)
+        meta_ext_new = _build_meta_from_uids(findme['uid'], api_key=api_key)
         meta_ext_new.index = findme['nlmid']
         meta_new = _trim_metadata(meta_ext_new)
         if meta_new is None:
@@ -656,14 +657,14 @@ def _get_alt_titles(titleotherlist, main_title) -> set:
     return alt_set
 
 
-def _fill_uids(df):  # , save_map=True
+def _fill_uids(df, api_key=None):  # , save_map=True
     """Use NLM IDs to populate UID column, calling NCBI API if necessary."""
     # uid_dict = _load_uid_dict_from_file()
     df['uid'] = _get_uids_from_numeric_nlmids(df['nlmid'])
     nlmids_unknown = list(df.loc[df.uid.isnull().loc[lambda v: v].index, 'nlmid'])
     if nlmids_unknown:
         _logger.info(f"Looking up {len(nlmids_unknown)} alphanumeric NLM IDs.")
-        new_uid_dict = _request_uids_from_nlmids(nlmids_unknown)
+        new_uid_dict = _request_uids_from_nlmids(nlmids_unknown, api_key=api_key)
         _logger.info(f"NLM IDs lookup complete.")
         # uid_dict.update(new_uid_dict)
         # if save_map:
@@ -686,7 +687,7 @@ def _get_uids_from_numeric_nlmids(nlmid_series: pd.Series) -> pd.Series:
     return uids
 
 
-def _build_meta_from_uids(uids, batch_size=400):
+def _build_meta_from_uids(uids, batch_size=400, api_key=None):
     """Build *extended* metadata table for NLM UIDs from NCBI esummary API.
 
     Includes many metadata columns that will not be used/stored.
@@ -702,14 +703,14 @@ def _build_meta_from_uids(uids, batch_size=400):
         ind += 1
         uids_batch = [i for i in g if i]
         try:
-            records = _get_meta_records_from_ids(uids_batch)
+            records = _get_meta_records_from_ids(uids_batch, api_key=api_key)
         except HTTPError414 as err:
             _logger.info(f"414 at index {ind} ({err}), splitting into two requests.")
             n_half = round(len(uids_batch) / 2)
             uids1 = uids_batch[:n_half]
             uids2 = uids_batch[n_half:]
-            records1 = _get_meta_records_from_ids(uids1)
-            records2 = _get_meta_records_from_ids(uids2)
+            records1 = _get_meta_records_from_ids(uids1, api_key=api_key)
+            records2 = _get_meta_records_from_ids(uids2, api_key=api_key)
             records = records1 + records2
             ind += 1
         _logger.info(f"Progress: finished lookup for batch {ind_g + 1} of {n_batches}")
@@ -718,7 +719,7 @@ def _build_meta_from_uids(uids, batch_size=400):
     return meta
 
 
-def _get_meta_records_from_ids(uids_batch):
+def _get_meta_records_from_ids(uids_batch, api_key=None):
     collapse_list_vars = [
         'authorlist',
         'publicationinfolist',
@@ -729,7 +730,6 @@ def _get_meta_records_from_ids(uids_batch):
     records = []  # will hold all meta records
     ids = ','.join(uids_batch)
     # CF: esummary -db nlmcatalog -mode json -id {ids} > group_uids.txt
-    api_key = os.environ.get('API_KEY', None)
     api_kw = {'api_key': api_key} if api_key else {}
     if not api_key:
         _logger.info("API_KEY env variable not present. Attempting Entrez "
@@ -776,18 +776,19 @@ def _yield_records(journals_path):
         yield record
 
 
-def _request_uids_from_nlmids(nlmids):
+def _request_uids_from_nlmids(nlmids, api_key=None):
     """Use eSearch API to get NLM UIDs from NLM IDs.
 
     Args:
         nlmids (iterable): NLM IDs as strings.
+        api_key (str): NCBI Entrez API KEY (optional)
 
     Returns:
         dictionary of NLM ID: NLM UID
     """
     uid_dict = dict()
     for ind, nlmid in enumerate(nlmids):
-        uid = _request_uid_for_single_nlmid(nlmid)
+        uid = _request_uid_for_single_nlmid(nlmid, api_key=api_key)
         if uid is not None:
             uid_dict[nlmid] = uid
         if not ind % 100:
@@ -795,12 +796,13 @@ def _request_uids_from_nlmids(nlmids):
     return uid_dict
 
 
-def _request_uid_for_single_nlmid(nlmid: str) -> Union[str, None]:
+def _request_uid_for_single_nlmid(nlmid: str,
+                                  api_key: Union[str, None] = None) -> Union[str, None]:
     """Use eSearch API to get NCBI Entrez UID from NLM ID."""
     res = requests.get(URL_ESEARCH,
                        params=dict(db='nlmcatalog', id=nlmid,
                                    term=nlmid, field='nlmid',
-                                   api_key=os.environ['API_KEY']))
+                                   api_key=api_key))
     out = xmltodict.parse(res.content)['eSearchResult']
     if out['Count'] != '1':
         _logger.error(f'Non single result for {nlmid}')
@@ -835,4 +837,3 @@ def _unused_test_nlmids_for_lookup_failure(ids):
     if not problem_ids:
         _logger.info("IDs looked up successfully.")
     return problem_ids
-

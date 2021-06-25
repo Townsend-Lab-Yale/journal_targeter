@@ -13,7 +13,6 @@ import pandas as pd
 from .helpers import get_issn_safe, get_issn_comb, get_clean_lowercase
 
 
-SCOPUS_XLSX_PATH = os.environ.get('SCOPUS_XLSX_PATH')
 CITESCORE_YEAR = None  # Automatically identified from column names in sources file
 
 _logger = logging.getLogger(__name__)
@@ -23,7 +22,7 @@ class ColumnException(Exception):
     pass
 
 
-def load_scopus_journals_full(scopus_xlsx_path=SCOPUS_XLSX_PATH):
+def load_scopus_journals_full(scopus_xlsx_path=None):
     """Load Scopus journals table.
 
     Args:
@@ -68,7 +67,7 @@ def load_scopus_journals_full(scopus_xlsx_path=SCOPUS_XLSX_PATH):
     return df
 
 
-def load_scopus_journals_reduced(scopus_xlsx_path=SCOPUS_XLSX_PATH):
+def load_scopus_journals_reduced(scopus_xlsx_path=None):
     """Load small / reduced Scopus journals table with key columns.
 
         Args:

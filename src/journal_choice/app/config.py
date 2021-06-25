@@ -11,6 +11,9 @@ dotenv.load_dotenv(paths.ENV_PATH, verbose=False)
 
 
 class Config:
+    DEMO_PREFIX = os.environ.get('DEMO_PREFIX', 'sars')
+    API_KEY = os.environ.get('API_KEY')
+
     SECRET_KEY = os.environ.get('SECRET_KEY') or os.urandom(16)
     SESSION_TYPE = 'filesystem'
     SESSION_FILE_DIR = os.environ.get('SESSION_FILE_DIR', paths.SESSION_DIR)

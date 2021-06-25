@@ -11,16 +11,9 @@ import click
 from flask import render_template
 # from flask.cli import with_appcontext
 
-from . import logger
-
+from . import paths
 from .app import create_app
-
-from .admin import copy_initial_data
-
-# ENSURE DOTENV VARIABLES HAVE LOADED (for gunicorn)
-if not os.getenv('FLASK_CONFIG', ''):
-    from dotenv import load_dotenv, find_dotenv
-    load_dotenv(find_dotenv())
+from .admin import copy_initial_data, load_dotenv_as_dict
 
 
 copy_initial_data()

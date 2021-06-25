@@ -2,7 +2,7 @@ import os
 import logging
 import tempfile
 
-from flask import render_template, redirect, url_for, flash, session
+from flask import render_template, redirect, url_for, flash, session, current_app
 
 from . import main
 from .forms import UploadForm
@@ -53,7 +53,7 @@ def results():
 @main.route('/demo/<demo_prefix>', methods=['GET', 'POST'])
 def demo(demo_prefix=None):
     if demo_prefix is None:
-        demo_prefix = os.environ.get('DEMO_PREFIX')
+        demo_prefix = current_app.config['DEMO_PREFIX']
     # Temporary demo update process
     force_update = (os.environ.get('FORCE_DEMO_UPDATE', 'false').lower()
                     in ['true', '1'])
