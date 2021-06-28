@@ -60,6 +60,12 @@ def config_prompt():
     add_api_key = click.confirm("Store an API key?", default=False)
     if add_api_key:
         _set_env_via_prompt('API_KEY', 'NCBI API KEY')
+    override_app = click.confirm("Override default app path?", default=False)
+    default_app = 'journal_choice.journals'
+    if override_app:
+        _set_env_via_prompt('FLASK_APP', 'FLASK_APP', default=default_app)
+    else:
+        env_dict['FLASK_APP'] = default_app
     _set_env_via_prompt('FLASK_ENV', 'Environment', default='production',
                         type=click.Choice(['development', 'production']))
     _set_env_via_prompt('SECRET_KEY', 'Secret key (for encryption)',
