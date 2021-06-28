@@ -157,7 +157,7 @@ def create_dev_app():
 
 
 @cli.group(cls=FlaskGroup, create_app=create_dev_app)
-def runserver():
+def flask():
     """Serve using Flask cli."""
 
 
