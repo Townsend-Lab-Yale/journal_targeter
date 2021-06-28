@@ -296,7 +296,7 @@ def _store_new_env(env_dict) -> Union[None, os.PathLike]:
     env_path_pl.parent.mkdir(exist_ok=True)
     env_path_pl.touch()
     for key in env_dict:
-        dotenv.set_key(env_path_pl, key, env_dict[key])
+        dotenv.set_key(env_path_pl, key, str(env_dict[key]), quote_mode='auto')
     _logger.info("Created .env file")
     return backup_path
 
