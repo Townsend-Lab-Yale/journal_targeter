@@ -258,6 +258,13 @@ def match_data(query_yaml=None, ris_path=None, out_basename=None):
     click.echo(f"Results written to {out_path}.", color='green')
 
 
+@app.shell_context_processor
+def make_shell_context():
+    from .reference import MT, TM, init_reference_data_from_cache
+    pm = init_reference_data_from_cache()
+    return dict(pm=pm, MT=MT, TM=TM)
+
+
 @app.cli.command()
 def deploy():
     """Run deployment tasks."""
