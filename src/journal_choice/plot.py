@@ -14,7 +14,8 @@ from bokeh import transform as bkt
 from .colors import CATEG_HEX
 from .reference import MT
 
-_URL_NLM = "https://www.ncbi.nlm.nih.gov/nlmcatalog/?term=@uid[nlmid]"
+_URL_NLM_BK = "https://www.ncbi.nlm.nih.gov/nlmcatalog/?term=@uid[nlmid]"
+_URL_NLM_USCORE = "https://www.ncbi.nlm.nih.gov/nlmcatalog/?term=<%= uid %>[nlmid]"
 _URL_PUBMED = "https://pubmed.ncbi.nlm.nih.gov/@PMID/"
 _DEFAULT_IMPACT = "CiteScore"
 _DEFAULT_MATCH = 'sim_max'
@@ -263,7 +264,7 @@ def _add_scatter(fig=None, source=None, **kwargs):
 
     fig.add_tools(bkm.HoverTool(renderers=[r1_open, r1_closed], tooltips=tooltips))  # , callback=cb_hover
     taptool = fig.select(type=bkm.TapTool)
-    taptool.callback = bkm.OpenURL(url=_URL_NLM)
+    taptool.callback = bkm.OpenURL(url=_URL_NLM_BK)
     fig.legend.click_policy = 'hide'
 
 
@@ -310,7 +311,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     col_names = {col: col_param_dict[col][0] for col in col_param_dict}
     format_dict = {
         'journal_name': bkm.widgets.HTMLTemplateFormatter(
-            template=f"""<a href="{_URL_NLM.replace('@uid', '')}<%= uid %>" """
+            template=f"""<a href="{_URL_NLM_USCORE}" """
                      """target="_blank"><i class="fas fa-external-link-alt pr-1"></i></a>"""
                      """<span class="journal-cell" data-toggle="tooltip" title="<%= value %>">"""
                      """<%= value %></span>"""),
@@ -415,7 +416,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
                      color='ax_impact_bg')
     r_i = p_l.hbar(y='jid', height=0.4, left=0, right='ax_impact', source=source_j)
     taptool_impact = p_l.select(type=bkm.TapTool)
-    taptool_impact.callback = bkm.OpenURL(url=_URL_NLM)
+    taptool_impact.callback = bkm.OpenURL(url=_URL_NLM_BK)
 
     # WIDGETS
     # IMPACT SELECT
