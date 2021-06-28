@@ -14,3 +14,4 @@ def init_reference_data_from_cache():
     pm_ext = load_pubmed_journals()
     MT.init_data(pm_ext)
     TM.init_data()  # use existing data. priority: pickle > tsv.gz
+    return pm_ext
