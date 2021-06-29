@@ -11,6 +11,8 @@ from typing import Union
 import click
 import dotenv
 from flask import Flask, render_template
+from flask.cli import FlaskGroup
+
 
 from . import paths
 from .app import create_app
@@ -149,14 +151,12 @@ def run(**kwargs):
     app.run()
 
 
-from flask.cli import FlaskGroup
+def create_app_cli():
+    env_name = os.environ.get('FLASK_ENV', 'production')
+    return create_app(env_name)
 
 
-def create_dev_app():
-    return create_app('development')
-
-
-@cli.group(cls=FlaskGroup, create_app=create_dev_app)
+@cli.group(cls=FlaskGroup, create_app=create_app_cli)
 def flask():
     """Serve using Flask cli."""
 
