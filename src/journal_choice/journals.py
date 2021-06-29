@@ -266,26 +266,6 @@ def make_shell_context():
 
 
 @app.cli.command()
-def deploy():
-    """Run deployment tasks."""
-    import shutil
-    from .demo import update_demo_plot
-    update_demo_plot(app.config['DEMO_PREFIX'])
-    use_env = '.env.server'
-    shutil.copy(use_env, '.env')
-    print(f"Copied from {use_env} to .env")
-
-
-@app.cli.command()
-def develop():
-    """Set up development server."""
-    import shutil
-    use_env = '.env.dev'
-    shutil.copy(use_env, '.env')
-    print(f"Copied from {use_env} to .env")
-
-
-@app.cli.command()
 @click.option("-y", "--yaml_path", help="YAML path with title and abstract.")
 @click.option("-r", "--ris_path", help="RIS path with references.")
 @click.option("--prefix", help="Name prefix for demo data, e.g. lung.")
