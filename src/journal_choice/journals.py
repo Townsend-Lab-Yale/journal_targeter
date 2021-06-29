@@ -135,13 +135,27 @@ def config_edit():
 
 @cli.command()
 @click.option('-y', '--yaml', 'query_yaml',
-              required=True, type=click.Path(exists=True),
+              type=click.Path(exists=True),
               help='Path to YAML file with title and abstract fields.')
 @click.option('-r', '--ris', 'ris_path', type=click.Path(exists=True),
               help='Path to references file in RIS format.')
-@click.option('-o', '--out_basename', default='out')
+@click.option('-o', '--out_basename')
 def match(query_yaml=None, ris_path=None, out_basename=None):
     """Run search and save html file."""
+    if query_yaml is None:
+        example_path = os.path.join(paths.DATA_ROOT, 'demo', 'example.yaml')
+        import pathlib
+        example_txt = pathlib.Path(example_path).read_text()
+        query_yaml = click.edit(example_txt)
+        if not query_yaml:
+            click.secho("No YAML data provided.")
+    if ris_path is None:
+        ris_path = click.prompt('RIS path', type=click.Path(exists=True))
+    if out_basename is None:
+        out_basename = click.prompt('Output basename, e.g. <basename>.html',
+                                    default='output')
+    from .reference import init_reference_data_from_cache
+    init_reference_data_from_cache()
     return match_data(query_yaml=query_yaml, ris_path=ris_path, out_basename=out_basename)
 
 

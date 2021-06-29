@@ -48,6 +48,7 @@ def copy_initial_data():
         ('pubmed', 'meta.tsv.gz'),
         ('demo', 'sars.ris'),
         ('demo', 'sars.yaml'),
+        ('demo', 'example.yaml'),
     ]:
         new_path = Path(paths.DATA_ROOT).joinpath(dir_name, file_name)
         if not new_path.exists():
