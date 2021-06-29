@@ -115,11 +115,14 @@ def not_nan(val):
     return False
 
 
-def get_queries_from_yaml(yaml_path):
-    if not os.path.exists(yaml_path):
-        raise FileNotFoundError('Invalid query YAML path.')
-    with open(yaml_path, 'r') as infile:
-        query_dict = yaml.load(infile, yaml.SafeLoader)
+def get_queries_from_yaml(yaml_input):
+    if isinstance(yaml_input, os.PathLike):
+        if not os.path.exists(yaml_input):
+            raise FileNotFoundError('Invalid query YAML path.')
+        with open(yaml_input, 'r') as infile:
+            query_dict = yaml.load(infile, yaml.SafeLoader)
+    else:
+        query_dict = yaml.load(yaml_input, yaml.SafeLoader)
     _logger.info(f"Inputs:\n{pprint.pformat(query_dict, sort_dicts=False)}.")
     assert not {'title', 'abstract'}.difference(set(query_dict.keys())), \
         "Keys must be title, abstract"
