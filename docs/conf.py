@@ -114,7 +114,7 @@ source_suffix = [".rst", ".md"]
 master_doc = "index"
 
 # General information about the project.
-project = "journal_choice"
+project = "journal_targeter"
 copyright = "2021, Stephen Gaffney"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -249,7 +249,7 @@ html_static_path = ["_static"]
 # html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "journal_choice-doc"
+htmlhelp_basename = "journal_targeter-doc"
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -266,7 +266,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-    ("index", "user_guide.tex", "journal_choice Documentation", "Stephen Gaffney", "manual")
+    ("index", "user_guide.tex", "journal_targeter Documentation", "Stephen Gaffney", "manual")
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
