@@ -2,7 +2,7 @@ from io import StringIO
 
 import pandas as pd
 
-from journal_choice import mapping
+from journal_targeter import mapping
 
 
 def test_title_issn_match():

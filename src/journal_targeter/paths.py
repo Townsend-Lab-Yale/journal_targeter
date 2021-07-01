@@ -4,7 +4,7 @@ import pathlib
 import appdirs
 
 
-_app_dirs = appdirs.AppDirs('journal_choice')
+_app_dirs = appdirs.AppDirs('journal_targeter')
 DATA_ROOT = _app_dirs.user_data_dir
 CONFIG_DIR = pathlib.Path(_app_dirs.user_config_dir).joinpath('config')
 ENV_PATH = CONFIG_DIR.joinpath('.env')

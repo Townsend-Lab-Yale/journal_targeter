@@ -37,7 +37,7 @@ except ImportError:
     from sphinx import apidoc
 
 output_dir = os.path.join(__location__, "api")
-module_dir = os.path.join(__location__, "../src/journal_choice")
+module_dir = os.path.join(__location__, "../src/journal_targeter")
 try:
     shutil.rmtree(output_dir)
 except FileNotFoundError:
@@ -184,7 +184,7 @@ html_theme_options = {
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
 try:
-    from journal_choice import __version__ as version
+    from journal_targeter import __version__ as version
 except ImportError:
     pass
 else:

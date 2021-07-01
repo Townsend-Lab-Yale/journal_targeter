@@ -2,8 +2,8 @@ import pytest
 import pandas as pd
 
 
-from journal_choice.demo import get_demo_data
-# from journal_choice.mapping import run_queries
+from journal_targeter.demo import get_demo_data
+# from journal_targeter.mapping import run_queries
 
 
 @pytest.fixture()

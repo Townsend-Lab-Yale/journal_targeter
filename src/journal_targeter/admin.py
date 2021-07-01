@@ -23,7 +23,7 @@ def load_dotenv_as_dict():
     dotenv_vals = dotenv.dotenv_values(env_path)
     # dotenv.load_dotenv(env_path, verbose=False)
     # if 'FLASK_APP' not in os.envir0n:
-    #     os.envir0n['FLASK_APP'] = 'journal_choice.journals'
+    #     os.envir0n['FLASK_APP'] = 'journal_targeter.journals'
     return dotenv_vals
 
 
@@ -53,7 +53,7 @@ def copy_initial_data():
         new_path = Path(paths.DATA_ROOT).joinpath(dir_name, file_name)
         if not new_path.exists():
             added_data.append(file_name)
-            with resources.path(f'journal_choice.refs.{dir_name}', file_name) as path:
+            with resources.path(f'journal_targeter.refs.{dir_name}', file_name) as path:
                 shutil.copy(path, new_path)
     if added_data:
         _logger.info(f"Copied reference data to {paths.DATA_ROOT}: {added_data}.")

@@ -1,1 +1,1 @@
-__all__ = ["journal_choice"]
+__all__ = ["journal_targeter"]

@@ -1,7 +1,7 @@
 """
 Run app with `flask run`
 or
-`gunicorn -b 0.0.0.0:5005 -w 4 src.journal_choice.journals:app`
+`gunicorn -b 0.0.0.0:5005 -w 4 src.journal_targeter.journals:app`
 """
 import os
 import logging
@@ -63,7 +63,7 @@ def config_prompt():
     if add_api_key:
         _set_env_via_prompt('API_KEY', 'NCBI API KEY')
     override_app = click.confirm("Override default app path?", default=False)
-    default_app = 'journal_choice.journals'
+    default_app = 'journal_targeter.journals'
     if override_app:
         _set_env_via_prompt('FLASK_APP', 'FLASK_APP', default=default_app)
     else:
@@ -206,8 +206,8 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
         from .reference import TM
         TM.init_data()
     if scopus_path:
-        from journal_choice import scopus
-        from journal_choice.models import RefTable, TableMatcher
+        from journal_targeter import scopus
+        from journal_targeter.models import RefTable, TableMatcher
         scopsm = scopus.load_scopus_journals_reduced(scopus_path)  # 31 s
         scop = RefTable(df=scopsm, source_name='scopus', index_is_uid=True,
                         rename_dict={'citescore': 'CiteScore'},
@@ -217,8 +217,8 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
         tm_scop = TableMatcher(scop)
         tm_scop.match_missing(n_processes=ncpus, save=True)
     if jcr_path:
-        from journal_choice.helpers import load_jcr_json
-        from journal_choice.models import RefTable, TableMatcher
+        from journal_targeter.helpers import load_jcr_json
+        from journal_targeter.models import RefTable, TableMatcher
         jif = load_jcr_json(jcr_path)
         jcr_rename_dict = {'journalImpactFactor': 'Impact',
                            'eigenFactorScore': 'EF',

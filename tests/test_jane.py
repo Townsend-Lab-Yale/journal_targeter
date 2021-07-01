@@ -1,6 +1,6 @@
 import pytest_check as check
 
-from journal_choice import lookup
+from journal_targeter import lookup
 
 text = 'We estimate the distribution of serial intervals for 468 confirmed ' \
        'cases of coronavirus disease reported in China as of February 8, 2020. ' \
