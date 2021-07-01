@@ -20,7 +20,7 @@ def index():
     # check for populated session
     has_results = 'bokeh_js' in session
     last_title = session.get('title', None)
-    return render_template('home.html', title='Journal Optimized Targeting',
+    return render_template('home.html', title='Journal Targeter',
                            last_title=last_title,
                            )
 
