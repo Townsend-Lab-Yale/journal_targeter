@@ -116,9 +116,8 @@ def not_nan(val):
 
 
 def get_queries_from_yaml(yaml_input):
-    if isinstance(yaml_input, os.PathLike):
-        if not os.path.exists(yaml_input):
-            raise FileNotFoundError('Invalid query YAML path.')
+    """Load title, abstract dictionary from yaml path or string."""
+    if os.path.exists(yaml_input):
         with open(yaml_input, 'r') as infile:
             query_dict = yaml.load(infile, yaml.SafeLoader)
     else:
