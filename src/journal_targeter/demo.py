@@ -14,7 +14,7 @@ from .helpers import get_queries_from_yaml
 _logger = logging.getLogger(__name__)
 
 
-def get_demo_data(file_prefix):
+def get_demo_data_with_prefix(file_prefix):
     """Load data dictionary for specified demo name prefix.
 
     Args:
@@ -22,7 +22,7 @@ def get_demo_data(file_prefix):
 
     Returns:
         dict with keys: title, abstract, ris_name, j, a, jf, af, refs_df,
-            bokeh_js, bokeh_icats.
+            bokeh_js, bokeh_divs.
     """
     pickle_path = os.path.join(DEMO_DIR, f'{file_prefix}.pickle')
     with open(pickle_path, 'rb') as infile:
@@ -81,13 +81,6 @@ def create_demo_data(title=None, abstract=None, ris_name=None,
     _build_demo_pickle(yaml_filename)
 
 
-def init_demo(prefix):
-    """Create demo pickle file from inputs YAML and RIS file in demo dir."""
-    yaml_path = os.path.join(DEMO_DIR, f'{prefix}.yaml')
-    ris_path = os.path.join(DEMO_DIR, f'{prefix}.ris')
-    create_demo_data_from_yaml(yaml_path, ris_path, prefix=prefix, save_yaml=False)
-
-
 def create_demo_data_from_yaml(yaml_path, ris_path, prefix=None, save_yaml=True):
     """Use yaml file with title + abstract, ris_path to create demo example."""
     demo_dict = get_queries_from_yaml(yaml_path)
@@ -107,6 +100,16 @@ def create_demo_data_from_yaml(yaml_path, ris_path, prefix=None, save_yaml=True)
     create_demo_data(file_prefix=prefix, save_yaml=save_yaml, **demo_dict)
 
 
+def init_demo(prefix, overwrite=True):
+    """Create demo pickle file from inputs YAML and RIS file in demo dir."""
+    yaml_path = os.path.join(DEMO_DIR, f'{prefix}.yaml')
+    ris_path = os.path.join(DEMO_DIR, f'{prefix}.ris')
+    output_path = os.path.join(DEMO_DIR, f'{prefix}.pickle')
+    if not overwrite and os.path.exists(output_path):
+        return
+    create_demo_data_from_yaml(yaml_path, ris_path, prefix=prefix, save_yaml=False)
+
+
 def _build_demo_pickle(yaml_filename):
     """Build dataframes of Jane title+abstract lookups and reference parsing.
 
@@ -118,8 +121,8 @@ def _build_demo_pickle(yaml_filename):
         pickle_basename (str): pickle filename with processed data tables.
     """
 
-    inputs_path = os.path.join(DEMO_DIR, yaml_filename)
-    with open(inputs_path) as infile:
+    yaml_path = os.path.join(DEMO_DIR, yaml_filename)
+    with open(yaml_path) as infile:
         demo = yaml.load(infile, yaml.SafeLoader)
     ris_path = os.path.join(DEMO_DIR, demo['ris_name'])
 
@@ -137,8 +140,7 @@ def _build_demo_pickle(yaml_filename):
         'af': af,
         'refs_df': refs_df,
         'bokeh_js': bokeh_js,
-        'bokeh_icats': bokeh_divs['icats'],
-        'bokeh_table': bokeh_divs['table'],
+        'bokeh_divs': bokeh_divs,
     }
     prefix = os.path.splitext(yaml_filename)[0]
     pickle_path = os.path.join(DEMO_DIR, f'{prefix}.pickle')
