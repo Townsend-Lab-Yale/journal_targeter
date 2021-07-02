@@ -8,6 +8,9 @@ from .. import paths
 basedir = os.path.abspath(os.path.dirname(__file__))
 _logger = logging.getLogger(__name__)
 dotenv.load_dotenv(paths.ENV_PATH, verbose=False)
+# Ensure FLASK_APP is specified (in case served with flask)
+if 'FLASK_APP' not in os.environ:
+    os.environ['FLASK_APP'] = 'journal_targeter.journals'
 
 
 class Config:
