@@ -9,7 +9,7 @@ from .forms import UploadForm
 
 from ...mapping import run_queries
 from ...plot import get_bokeh_components
-from ...demo import get_demo_data
+from ...demo import get_demo_data_with_prefix
 from ...ref_loading import BadRisException
 
 _logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ def demo(demo_prefix=None):
     if force_update:
         from ...demo import update_demo_plot
         update_demo_plot(demo_prefix)
-    data = get_demo_data(demo_prefix)
+    data = get_demo_data_with_prefix(demo_prefix)
     return render_template('index.html', title='Demo',
                            query_title=data['title'],
                            query_abstract=data['abstract'],

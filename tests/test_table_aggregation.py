@@ -2,13 +2,13 @@ import pytest
 import pandas as pd
 
 
-from journal_targeter.demo import get_demo_data
+from journal_targeter.demo import get_demo_data_with_prefix
 # from journal_targeter.mapping import run_queries
 
 
 @pytest.fixture()
 def df_dict():
-    data = get_demo_data('sars')
+    data = get_demo_data_with_prefix('sars')
     return data
 
 
