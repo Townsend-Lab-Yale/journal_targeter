@@ -95,16 +95,17 @@ class TitleMatcher:
         if pm is not None:
             _logger.info("Building TitleMatcher dictionaries from pubmed table.")
             self._init_from_pm_full(pm)
+            self.populated = True
+            self.save_pickle()
         elif os.path.exists(paths.TM_PICKLE_PATH):
             _logger.debug('Loading from TM pickle.')
             self._init_from_pickle()
         else:
             _logger.info("Building TitleMatcher from initial pubmed data.")
             pm = load_pubmed_journals()
-            # pm = self._read_initial_tsv()
             self._init_from_pm_full(pm)
-            # raise DataNotAvailable("Pubmed table is required by TableMatcher.")
-        self.populated = True
+            self.populated = True
+            self.save_pickle()
         return self
 
     def save_pickle(self):
