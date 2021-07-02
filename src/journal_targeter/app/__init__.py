@@ -26,6 +26,8 @@ def create_app(config_name):
     def before_first_request():
         from ..reference import init_reference_data_from_cache
         init_reference_data_from_cache()
+        from ..demo import init_demo
+        init_demo(app.config['DEMO_PREFIX'], overwrite=False)
 
     return app
 
