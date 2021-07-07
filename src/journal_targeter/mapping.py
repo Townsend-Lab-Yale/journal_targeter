@@ -52,8 +52,7 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
     citations = refs_df[['jid', 'refs_name', 'uid']].value_counts() \
         .reset_index(level=[1, 2]).rename(
             columns={0: 'cited'})
-    jfm = jf.drop(['single_match'], axis=1).join(
-        citations, how='outer', lsuffix='_jane', rsuffix='_refs')
+    jfm = jf.join(citations, how='outer', lsuffix='_jane', rsuffix='_refs')
     jfm.insert(0, 'uid', jfm.uid_refs.where(jfm.uid_jane.isnull(), jfm.uid_jane))
     jfm['cited'] = jfm['cited'].fillna(0).astype(int)
 
@@ -108,7 +107,7 @@ def aggregate_jane_journals_articles(journals_t, journals_a, articles_t,
     temp = j.copy()
     temp['conf_sum'] = temp['confidence']  # placeholder for conf sum aggregation
     groupby_col = 'jid'
-    get_first = ['jane_name', 'influence', 'tags', 'uid', 'single_match', 'is_oa']
+    get_first = ['jane_name', 'influence', 'tags', 'uid', 'is_oa']
     # get_first += list(metrics.METRIC_NAMES)
     if from_api:
         get_first.extend(['in_medline', 'in_pmc'])
@@ -174,10 +173,12 @@ def process_inputs(input_text=None, ris_path=None, refs_df=None, input_type=None
     # Get matches and scores
     _logger.info(f"Running Jane search of {input_type or 'input'} text...")
     journals, articles = lookup_jane(input_text)
-
     # Add pubmed matching info
-    match_jane = TM.match_titles(journals.jane_name)
-    journals = pd.concat([journals, match_jane], axis=1)
+    # match_jane = TM.match_titles(journals.jane_name)  # orig used titles only
+    match_jane = TM.lookup_uids_from_title_issn(titles=journals.jane_name,
+                                                issn_print=journals.jane_issn)
+    match_jane.index.name = 'j_rank'
+    journals = pd.concat([journals, match_jane], axis=1, ignore_index=False)
 
     return journals, articles, refs_df
 
