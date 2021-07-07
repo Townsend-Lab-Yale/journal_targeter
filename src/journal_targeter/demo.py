@@ -73,7 +73,7 @@ def create_demo_data(title=None, abstract=None, ris_name=None,
         output paths ([yaml_path, pickle_path]): saved file paths.
     """
     if file_prefix is None:
-        raise ValueError("file_prefix is required to generate {file_prefix}.yaml")
+        raise ValueError(f"file_prefix is required to generate {file_prefix}.yaml")
     yaml_filename = f"{file_prefix}.yaml"
     if save_yaml:
         _save_inputs_yaml(title=title, abstract=abstract, ris_name=ris_name,
@@ -129,7 +129,6 @@ def _build_demo_pickle(yaml_filename):
     jf, af, refs_df = run_queries(
         query_title=demo['title'], query_abstract=demo['abstract'],
         ris_path=ris_path)
-
     bokeh_js, bokeh_divs = get_bokeh_components(jf, af, refs_df)
 
     data = {
