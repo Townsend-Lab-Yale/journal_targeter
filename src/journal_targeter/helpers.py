@@ -1,10 +1,13 @@
 import os
 import re
 import json
+import glob
 import logging
 import hashlib
+import pathlib
 import unicodedata
 from itertools import zip_longest
+from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -128,16 +131,48 @@ def get_queries_from_yaml(yaml_input):
     return query_dict
 
 
-def load_jcr_json(json_path):
-    """Create dataframe from JCR json."""
+def concat_json_data_records_as_single_file(glob_str, out_path):
+    paths = sorted([pathlib.Path(i) for i in glob.glob(glob_str)],
+                   key=lambda p: p.stat().st_ctime, reverse=True)
+    data = []
+    for path in paths:
+        with open(path, 'rb') as json_in:
+            data.extend(json.load(json_in)['data'])
+    n_records = len(data)
+    with open(out_path, 'w') as out:
+        json.dump({'data': data}, out, ensure_ascii=False)
+    _logger.info(f"{n_records} records written to {out_path}")
+
+
+def load_jcr_json(json_path, name_col='journalName',
+                  print_issn_col='issn', online_issn_col='eissn',
+                  jif_col='jif2019', jci_col='jci',
+                  ai_col='articleInfluenceScore', ef_col='eigenFactor',
+                  efn_col='normalizedEigenFactor', nan_val='n/a',
+                  issn_placeholder='****-****'):
+    """Create dataframe from JCR json files specified by glob string."""
     with open(json_path, 'r') as infile:
         jcr = json.load(infile)
-    jif = pd.DataFrame.from_records(jcr['data'])
-    use_cols = ['journalTitle', 'issn', 'journalImpactFactor', 'eigenFactorScore', 'articleInfluenceScore', 'normEigenFactor']
-    jif = jif[use_cols].drop_duplicates(keep=False)
-    assert(jif['journalTitle'].value_counts().max() == 1), "Some journal names are duplicated."  # TEST names are not duplicated
-    jif = jif.applymap(lambda v: np.nan if v == -999.999 else v)
-    return jif
+    df = pd.DataFrame.from_records(jcr['data'])
+    df = df.applymap(lambda v: np.nan if v == nan_val else v)
+    df[print_issn_col].replace(issn_placeholder, '', inplace=True)
+    df[online_issn_col].replace(issn_placeholder, '', inplace=True)
+    keep_cols = OrderedDict({
+        name_col: 'journal',
+        print_issn_col: 'issn_print',
+        online_issn_col: 'issn_online',
+        jif_col: 'JIF',
+        jci_col: 'JCI',
+        ai_col: 'AI',
+        ef_col: 'EF',
+        efn_col: 'EFn',
+    })
+    df_sm = df[keep_cols].rename(columns=keep_cols)
+    assert (df_sm['journal'].value_counts().max() == 1), "Some journal names are duplicated."
+    metric_cols = ['JIF', 'JCI', 'AI', 'EF', 'EFn']
+    for col in metric_cols:
+        df_sm[col] = df_sm[col].astype(float)
+    return df_sm
 
 
 def get_md5(file_path):

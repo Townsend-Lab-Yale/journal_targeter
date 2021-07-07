@@ -220,20 +220,17 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
         from journal_targeter.helpers import load_jcr_json
         from journal_targeter.models import RefTable, TableMatcher
         jif = load_jcr_json(jcr_path)
-        jcr_rename_dict = {'journalImpactFactor': 'Impact',
-                           'eigenFactorScore': 'EF',
-                           'articleInfluenceScore': 'AI',
-                           'normEigenFactor': 'EFn', }
-        jcr_ref = RefTable(source_name='jcr', df=jif, title_col='journalTitle',
-                           col_metrics=['Impact', 'AI', 'EF', 'EFn'],
-                           issn_col='issn', rename_dict=jcr_rename_dict,
+        jcr_ref = RefTable(source_name='jcr', df=jif, title_col='journal',
+                           col_metrics=['JIF', 'JCI', 'AI', 'EF', 'EFn'],
+                           issn_print='issn_print', issn_online='issn_online',
+                           rename_dict={},
                            index_is_uid=False)
         jcr_tm = TableMatcher(jcr_ref)
         jcr_tm.match_missing(n_processes=ncpus, save=True)
 
 
 @cli.command()
-def build(app: Flask):
+def build():
     """Create pubmed pickle object if needed; rebuild demo data."""
     from .reference import init_reference_data_from_cache
     init_reference_data_from_cache()
