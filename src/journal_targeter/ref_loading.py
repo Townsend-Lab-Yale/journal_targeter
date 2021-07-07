@@ -105,7 +105,7 @@ def identify_user_references(ris_path):
             volume, number, start_page, end_page, doi, url, and others...
         ...
     """
-    _logger.info(f"Loading references from {ris_path}.")
+    _logger.info(f"Loading references file.")
     df = _read_ris_file(ris_path)
     journal_names_uniq = df.journal.unique()
     if any([pd.isnull(i) for i in journal_names_uniq]):
