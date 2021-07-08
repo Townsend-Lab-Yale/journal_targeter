@@ -16,7 +16,7 @@ from flask.cli import FlaskGroup
 
 from . import paths
 from .app import create_app
-from .admin import copy_initial_data, load_dotenv_as_dict
+from .admin import copy_initial_data
 
 
 copy_initial_data()
@@ -52,7 +52,7 @@ def setup():
 def config_prompt():
     """Create configuration .env file via command prompt."""
     env_dict = dict()
-    prev_vals = load_dotenv_as_dict().copy()
+    prev_vals = dotenv.dotenv_values(paths.ENV_PATH).copy()
 
     def _set_env_via_prompt(var_name, prompt_str, default=None, **prompt_kw):
         if var_name in prev_vals:

@@ -13,20 +13,6 @@ from . import paths
 _logger = logging.getLogger(__name__)
 
 
-def load_dotenv_as_dict():
-    """Load env file values as ordered dictionary."""
-    env_path = paths.ENV_PATH
-    # if not os.path.exists(env_path):
-    #     defaults = {''}
-    #     for key in defaults:
-    #         dotenv.set_key(env_path, key, defaults[key])
-    dotenv_vals = dotenv.dotenv_values(env_path)
-    # dotenv.load_dotenv(env_path, verbose=False)
-    # if 'FLASK_APP' not in os.envir0n:
-    #     os.envir0n['FLASK_APP'] = 'journal_targeter.journals'
-    return dotenv_vals
-
-
 def refresh_data(app: Flask = None, rebuild_scopus=False):
     from .reference import TM
     from .demo import update_demo_plot
