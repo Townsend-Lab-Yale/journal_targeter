@@ -5,10 +5,10 @@ import shutil
 import logging
 import unicodedata
 
+from . import helpers
 from .paths import DEMO_DIR
 from .plot import get_bokeh_components
 from .mapping import run_queries
-from .helpers import get_queries_from_yaml
 
 
 _logger = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ def create_demo_data(title=None, abstract=None, ris_name=None,
 
 def create_demo_data_from_yaml(yaml_path, ris_path, prefix=None, save_yaml=True):
     """Use yaml file with title + abstract, ris_path to create demo example."""
-    demo_dict = get_queries_from_yaml(yaml_path)
+    demo_dict = helpers.get_queries_from_yaml(yaml_path)
     if not os.path.exists(ris_path):
         raise FileNotFoundError('Invalid query YAML path.')
     ris_name = os.path.basename(ris_path)
@@ -105,7 +105,8 @@ def init_demo(prefix, overwrite=True):
     yaml_path = os.path.join(DEMO_DIR, f'{prefix}.yaml')
     ris_path = os.path.join(DEMO_DIR, f'{prefix}.ris')
     output_path = os.path.join(DEMO_DIR, f'{prefix}.pickle')
-    if not overwrite and os.path.exists(output_path):
+    if not overwrite and os.path.exists(output_path) and \
+            helpers.pickle_seems_ok(output_path):
         return
     create_demo_data_from_yaml(yaml_path, ris_path, prefix=prefix, save_yaml=False)
 

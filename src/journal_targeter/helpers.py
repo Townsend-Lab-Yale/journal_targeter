@@ -2,6 +2,8 @@ import os
 import re
 import json
 import glob
+import gzip
+import pickle
 import logging
 import hashlib
 import pathlib
@@ -173,6 +175,19 @@ def load_jcr_json(json_path, name_col='journalName',
     for col in metric_cols:
         df_sm[col] = df_sm[col].astype(float)
     return df_sm
+
+
+def pickle_seems_ok(pickle_path):
+    is_gzipped = pickle_path.endswith('.gz')
+    open_fn = gzip.open if is_gzipped else open
+    if not os.path.exists(pickle_path):
+        return False
+    with open_fn(pickle_path, 'rb') as infile:
+        try:
+            temp = pickle.load(infile)
+            return True
+        except:
+            return False
 
 
 def get_md5(file_path):

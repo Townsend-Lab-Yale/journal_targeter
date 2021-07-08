@@ -47,7 +47,7 @@ import pandas as pd
 
 from . import paths
 from .helpers import get_issn_safe, get_issn_comb, get_clean_lowercase, grouper, \
-    coerce_issn_to_numeric_string, get_md5
+    coerce_issn_to_numeric_string, get_md5, pickle_seems_ok
 
 
 URL_ESUMMARY = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi'
@@ -97,7 +97,8 @@ class TitleMatcher:
             self._init_from_pm_full(pm)
             self.populated = True
             self.save_pickle()
-        elif os.path.exists(paths.TM_PICKLE_PATH):
+        elif os.path.exists(paths.TM_PICKLE_PATH) and \
+                pickle_seems_ok(paths.TM_PICKLE_PATH):
             _logger.debug('Loading from TM pickle.')
             self._init_from_pickle()
         else:
