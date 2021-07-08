@@ -153,12 +153,6 @@ def match(query_yaml=None, ris_path=None, out_basename=None):
     return match_data(query_yaml=query_yaml, ris_path=ris_path, out_basename=out_basename)
 
 
-@cli.command()
-def run(**kwargs):
-    """Run the server."""
-    app.run()
-
-
 def create_app_cli():
     env_name = os.environ.get('FLASK_ENV', 'production')
     return create_app(env_name)
@@ -232,6 +226,26 @@ def build():
     with app.app_context():
         demo_prefix = app.config['DEMO_PREFIX']
     init_demo(demo_prefix)
+
+
+import sys
+from subprocess import call
+
+@cli.command(context_settings=dict(ignore_unknown_options=True,))
+@click.argument('gunicorn_args', nargs=-1, type=click.UNPROCESSED)
+def gunicorn(gunicorn_args):
+    """Serve using gunicorn."""
+    gunicorn_path = pathlib.Path(sys.executable).parent.joinpath('gunicorn')
+    if not gunicorn_path.exists():
+        click.secho("gunicorn not found.", fg='red')
+        return
+    from .reference import init_reference_data_from_cache
+    init_reference_data_from_cache()
+    from .demo import init_demo
+    init_demo(app.config['DEMO_PREFIX'], overwrite=False)
+    cmdline = [str(gunicorn_path), ] + list(gunicorn_args) + ['journal_targeter.journals:app']
+    click.echo(f"Invoking: {' '.join(cmdline)}")
+    call(cmdline)
 
 
 def match_data(query_yaml=None, ris_path=None, out_basename=None):
