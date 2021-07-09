@@ -83,7 +83,7 @@ def search():
         ref_obj = form.ref_file.raw_data[0]  # type: werkzeug.FileStorage
         fs = ref_obj.stream
         fs.seek(0)
-        tempf = tempfile.TemporaryFile(mode='w+t')
+        tempf = tempfile.TemporaryFile(mode='w+t', encoding='utf8')
         tempf.writelines([i.decode('utf8') for i in fs.readlines()])
         tempf.seek(0)
 

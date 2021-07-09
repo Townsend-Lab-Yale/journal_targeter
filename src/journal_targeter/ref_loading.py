@@ -131,7 +131,7 @@ def _first_non_null(title_series):
 def _read_ris_file(ris_data):
     """Load table of references from RIS file path."""
     try:
-        if 'readlines' in dir(ris_data):
+        if 'seek' in dir(ris_data):
             import codecs
             line = ris_data.readline().encode('utf-8')
             if line.startswith(codecs.BOM_UTF8):
