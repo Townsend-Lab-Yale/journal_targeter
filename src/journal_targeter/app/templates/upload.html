@@ -24,14 +24,20 @@
     {{ form.hidden_tag() }}
     <div class="form-group row required">
         <label class="form-control-label col-lg-2" for="title-field">Your title</label>
-        <div class=" col-lg-8">
-            <textarea class="form-control" id="title-field" name="title" required type="text" value=""></textarea>
+        <div class="col-lg-8">
+            {% for error in form.title.errors %}
+            <div class="invalid-feedback" style="display: block; text-align: left">{{ error }}</div>
+            {% endfor %}
+            <textarea class="form-control" id="title-field" name="title" required type="text">{{ form.title.data }}</textarea>
         </div>
     </div>
     <div class="form-group row required">
         <label class="form-control-label col-lg-2" for="abstract-field">Your abstract</label>
-        <div class=" col-lg-8">
-            <textarea class="form-control" id="abstract-field" name="abstract" required></textarea>
+        <div class="col-lg-8">
+            {% for error in form.abstract.errors %}
+            <div class="invalid-feedback" style="display: block; text-align: left">{{ error }}</div>
+            {% endfor %}
+            <textarea class="form-control" id="abstract-field" name="abstract" required>{{ form.abstract.data }}</textarea>
         </div>
     </div>
     <div class="form-group row required">
@@ -46,6 +52,9 @@
             </span>
         </div>
         <div class=" col-lg-8">
+            {% for error in form.ref_file.errors %}
+            <div class="invalid-feedback" style="display: block; text-align: left">{{ error }}</div>
+            {% endfor %}
             <input class="form-control-file" id="ref_file" name="ref_file" required type="file">
         </div>
     </div>
