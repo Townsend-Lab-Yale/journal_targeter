@@ -1,6 +1,7 @@
 import os
 import pathlib
 
+import nltk
 import appdirs
 
 
@@ -11,6 +12,7 @@ ENV_PATH = CONFIG_DIR.joinpath('.env')
 DEMO_DIR = pathlib.Path(_app_dirs.user_data_dir).joinpath('demo')
 METRICS_DIR = os.path.join(DATA_ROOT, 'metrics')
 PUBMED_DIR = os.path.join(DATA_ROOT, 'pubmed')
+NLTK_DIR = os.path.join(DATA_ROOT, 'nltk')
 SESSION_DIR = os.path.join(DATA_ROOT, 'sessions')
 # pubmed files
 PM_MEDLINE_PATH = os.path.join(DATA_ROOT, 'pubmed', 'J_Medline.txt')
@@ -21,3 +23,5 @@ os.makedirs(DEMO_DIR, exist_ok=True)
 os.makedirs(METRICS_DIR, exist_ok=True)
 os.makedirs(PUBMED_DIR, exist_ok=True)
 os.makedirs(SESSION_DIR, exist_ok=True)
+
+nltk.data.path.insert(0, NLTK_DIR)

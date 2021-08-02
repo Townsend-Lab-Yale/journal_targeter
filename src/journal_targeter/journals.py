@@ -8,6 +8,7 @@ import logging
 import pathlib
 from typing import Union
 
+import nltk
 import click
 import dotenv
 from flask import Flask, render_template
@@ -220,6 +221,7 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
 @cli.command()
 def build():
     """Create pubmed pickle object if needed; rebuild demo data."""
+    nltk.download('wordnet', download_dir=paths.NLTK_DIR, quiet=True)
     from .reference import init_reference_data_from_cache
     init_reference_data_from_cache()
     from .demo import init_demo

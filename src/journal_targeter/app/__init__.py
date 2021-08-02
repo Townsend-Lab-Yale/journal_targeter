@@ -1,3 +1,4 @@
+import nltk
 from flask import Flask
 from flask_bootstrap import Bootstrap
 from flask_session import Session
@@ -24,6 +25,8 @@ def create_app(config_name):
 
     @app.before_first_request
     def before_first_request():
+        from .. import paths
+        nltk.download('wordnet', download_dir=paths.NLTK_DIR, quiet=True)
         from ..reference import init_reference_data_from_cache
         init_reference_data_from_cache()
         from ..demo import init_demo
