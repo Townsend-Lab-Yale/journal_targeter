@@ -21,7 +21,6 @@ dependencies:
   - lxml
   - matplotlib
   - xlrd
-  - fuzzywuzzy
   - networkx
   - beautifulsoup4
   - html5lib
