@@ -138,6 +138,15 @@ def config_edit():
 
 
 @cli.command()
+def build_demo():
+    """Create pubmed pickle object if needed; rebuild demo data."""
+    from .demo import init_demo
+    with app.app_context():
+        demo_prefix = app.config['DEMO_PREFIX']
+    init_demo(demo_prefix)
+
+
+@cli.command()
 @click.option('-y', '--yaml', 'query_yaml',
               type=click.Path(exists=True),
               help='Path to YAML file with title and abstract fields.')
@@ -224,21 +233,6 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
         jcr_tm = TableMatcher(jcr_ref)
         jcr_tm.match_missing(n_processes=ncpus, save=True)
 
-
-@cli.command()
-def build():
-    """Create pubmed pickle object if needed; rebuild demo data."""
-    nltk.download('wordnet', download_dir=paths.NLTK_DIR, quiet=True)
-    from .reference import init_reference_data_from_cache
-    init_reference_data_from_cache()
-    from .demo import init_demo
-    with app.app_context():
-        demo_prefix = app.config['DEMO_PREFIX']
-    init_demo(demo_prefix)
-
-
-import sys
-from subprocess import call
 
 @cli.command(context_settings=dict(ignore_unknown_options=True,))
 @click.argument('gunicorn_args', nargs=-1, type=click.UNPROCESSED)
