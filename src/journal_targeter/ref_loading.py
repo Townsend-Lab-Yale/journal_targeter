@@ -113,6 +113,7 @@ def identify_user_references(ris_path):
     # Add matching info (uid, categ, single_match) to user refs table
     from .reference import TM
     m = TM.match_titles(journal_names_uniq)
+    _logger.info(f"Matched {m.single_match.sum()} out of {len(m)} cited journals.")
     df = df.join(m.set_index('input_title'), how='left', on='journal')
     # put UID column first
     df = df[['uid'] + [i for i in df.columns if i != 'uid']].copy()

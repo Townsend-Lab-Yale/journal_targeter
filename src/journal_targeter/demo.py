@@ -89,7 +89,7 @@ def create_demo_data_from_yaml(yaml_path, ris_path, prefix=None, save_yaml=True)
     ris_name = os.path.basename(ris_path)
     dest_ris_path = os.path.join(DEMO_DIR, ris_name)
     if os.path.exists(dest_ris_path):
-        _logger.info("Using existing ris file in demo directory")
+        _logger.info("Using existing ris file in demo directory.")
     else:
         shutil.copy2(ris_path, dest_ris_path)
         _logger.info("Copied ris path to demo directory.")
