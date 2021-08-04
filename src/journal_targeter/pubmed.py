@@ -344,7 +344,7 @@ class TitleMatcher:
         elif not ambig_uids:
             _logger.info("No conflicting matches found when mapping to pubmed.")
         time_end = time.perf_counter()
-        _logger.info(f"Matching to Pubmed UIDs took {time_end - time_start:.1f} seconds")
+        _logger.info(f"Matching to Pubmed UIDs took {time_end - time_start:.1f} seconds.")
         n_unmatched = match.uid.isnull().sum()
         n_matched = len(match) - n_unmatched
         _logger.info(f"Successfully matched {n_matched} journals, leaving {n_unmatched} "
@@ -789,7 +789,7 @@ def _request_uids_from_nlmids(nlmids, api_key=None):
         if uid is not None:
             uid_dict[nlmid] = uid
         if not ind % 100:
-            _logger.info(f"Download progress: finished UID lookup for index {ind}")
+            _logger.info(f"Download progress: finished UID lookup for index {ind}.")
     return uid_dict
 
 
@@ -828,7 +828,7 @@ def _unused_test_nlmids_for_lookup_failure(ids):
     for nlmid in ids:
         res = requests.get(URL_ESUMMARY, params=dict(db='nlmcatalog', id=nlmid))
         if 'ERROR' in res.content.decode('utf8'):
-            _logger.info(f"Problem ID: {nlmid}")
+            _logger.info(f"Problem ID: {nlmid}.")
             problem_ids.append(nlmid)
         time.sleep(0.1)
     if not problem_ids:

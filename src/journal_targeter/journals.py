@@ -195,9 +195,9 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
         from . import pubmed
         api_key = app.config['API_KEY']
         if api_key:
-            _logger.info('API key present')
+            _logger.info('API key present.')
         else:
-            _logger.info('API key absent')
+            _logger.info('API key absent.')
         medline_updated = pubmed.download_and_compare_pubmed_reference()
         tm_pickle_exists = os.path.exists(paths.TM_PICKLE_PATH)
         if medline_updated or not tm_pickle_exists:
@@ -301,10 +301,14 @@ def _store_new_env(env_dict) -> Union[None, os.PathLike]:
     env_path_pl.touch()
     for key in env_dict:
         dotenv.set_key(env_path_pl, key, str(env_dict[key]), quote_mode='auto')
-    _logger.info("Created .env file")
+    _logger.info("Created .env file.")
     return backup_path
 
 
 def _get_previous_env_path():
     backup_name = os.path.basename(paths.ENV_PATH.name) + '.prev'
     return os.path.join(paths.CONFIG_DIR, backup_name)
+
+
+if __name__ == '__main__':
+    cli(['build-demo'])

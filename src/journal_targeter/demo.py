@@ -54,7 +54,7 @@ def update_demo_plot(file_prefix, use_pickle=True):
                  })
     with open(pickle_path, 'wb') as out:
         pickle.dump(data, out)
-    _logger.info(f"Updated demo data written to {pickle_path}")
+    _logger.info(f"Updated demo data written to {pickle_path}.")
     return pickle_path
 
 
@@ -146,7 +146,7 @@ def _build_demo_pickle(yaml_filename):
     pickle_path = os.path.join(DEMO_DIR, f'{prefix}.pickle')
     with open(pickle_path, 'wb') as out:
         pickle.dump(data, out)
-    _logger.info(f"Pickled data written to {pickle_path}")
+    _logger.info(f"Pickled data written to {pickle_path}.")
     return pickle_path
 
 
@@ -174,5 +174,5 @@ def _save_inputs_yaml(title=None, abstract=None, ris_name=None,
 
     with open(inputs_path, 'w') as out:
         yaml.dump(data, out, sort_keys=False)
-    _logger.info(f"Inputs yaml written to {inputs_path}")
+    _logger.info(f"Inputs yaml written to {inputs_path}.")
     return inputs_path

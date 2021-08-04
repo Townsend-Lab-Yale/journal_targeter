@@ -51,7 +51,7 @@ def add_metrics_to_pm(pm):
         ref = pd.read_csv(path, sep='\t', dtype={'uid': str})
         ref.set_index('uid', inplace=True)
         metric_cols = [i for i in ref.columns if i != 'source_id']
-        _logger.info(f"Adding metrics: {metric_cols}")
+        _logger.info(f"Adding metrics: {metric_cols}.")
         assert ref.index.is_unique
         col_overlap = set(pm.columns).intersection(metric_cols)
         pm.drop(col_overlap, axis=1, inplace=True)

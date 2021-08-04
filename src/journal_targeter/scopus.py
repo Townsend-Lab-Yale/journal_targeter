@@ -37,7 +37,7 @@ def load_scopus_journals_full(scopus_xlsx_path=None):
     df = pd.read_excel(scopus_xlsx_path,
                        dtype={'Print-ISSN': str, 'E-ISSN': str})
     time_end = time.perf_counter()
-    _logger.info("Finished loading scopus data in %.1f seconds", time_end - time_start)
+    _logger.info("Finished loading scopus data in %.1f seconds.", time_end - time_start)
     # sheet_name='Scopus Sources September 2019'
     df.columns = [i.replace('\n', ' ').replace('  ', ' ').strip() for i in df.columns]
     # COLUMN IDENTIFICATION
