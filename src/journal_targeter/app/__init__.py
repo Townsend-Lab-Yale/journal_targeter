@@ -25,10 +25,6 @@ def create_app(config_name):
 
     @app.before_first_request
     def before_first_request():
-        from .. import paths
-        nltk.download('wordnet', download_dir=paths.NLTK_DIR, quiet=True)
-        from ..reference import init_reference_data_from_cache
-        init_reference_data_from_cache()
         from ..demo import init_demo
         init_demo(app.config['DEMO_PREFIX'], overwrite=False)
 

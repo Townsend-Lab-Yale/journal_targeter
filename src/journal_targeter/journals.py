@@ -4,8 +4,10 @@ or
 `gunicorn -b 0.0.0.0:5005 -w 4 src.journal_targeter.journals:app`
 """
 import os
+import sys
 import logging
 import pathlib
+import subprocess
 from typing import Union
 
 import nltk
@@ -13,7 +15,6 @@ import click
 import dotenv
 from flask import Flask, render_template
 from flask.cli import FlaskGroup
-
 
 from . import paths
 from .app import create_app
@@ -39,9 +40,17 @@ def flask_match(**kwargs):
 
 @click.group()
 @click.option('--verbose/--quiet', default=False)
-def cli(verbose):
+@click.pass_context
+def cli(ctx: click.core.Context, verbose):
     if verbose:
         _logger.setLevel("DEBUG")
+    if ctx.invoked_subcommand not in {'setup', 'update-sources'}:
+        nltk.download('wordnet', download_dir=paths.NLTK_DIR, quiet=True)
+        from .reference import init_reference_data_from_cache
+        init_reference_data_from_cache()
+    if ctx.invoked_subcommand in {'flask', 'gunicorn'}:
+        from .demo import init_demo
+        init_demo(app.config['DEMO_PREFIX'], overwrite=False)
 
 
 @cli.group()
@@ -149,8 +158,6 @@ def match(query_yaml=None, ris_path=None, out_basename=None):
     if out_basename is None:
         out_basename = click.prompt('Output basename, e.g. <basename>.html',
                                     default='output')
-    from .reference import init_reference_data_from_cache
-    init_reference_data_from_cache()
     return match_data(query_yaml=query_yaml, ris_path=ris_path, out_basename=out_basename)
 
 
@@ -241,13 +248,9 @@ def gunicorn(gunicorn_args):
     if not gunicorn_path.exists():
         click.secho("gunicorn not found.", fg='red')
         return
-    from .reference import init_reference_data_from_cache
-    init_reference_data_from_cache()
-    from .demo import init_demo
-    init_demo(app.config['DEMO_PREFIX'], overwrite=False)
     cmdline = [str(gunicorn_path), ] + list(gunicorn_args) + ['journal_targeter.journals:app']
     click.echo(f"Invoking: {' '.join(cmdline)}")
-    call(cmdline)
+    subprocess.call(cmdline)
 
 
 def match_data(query_yaml=None, ris_path=None, out_basename=None):
@@ -281,9 +284,8 @@ def match_data(query_yaml=None, ris_path=None, out_basename=None):
 
 @app.shell_context_processor
 def make_shell_context():
-    from .reference import MT, TM, init_reference_data_from_cache
-    pm = init_reference_data_from_cache()
-    return dict(pm=pm, MT=MT, TM=TM)
+    from .reference import MT, TM
+    return dict(MT=MT, TM=TM)
 
 
 @app.cli.command()
