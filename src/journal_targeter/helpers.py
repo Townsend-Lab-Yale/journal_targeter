@@ -95,8 +95,12 @@ def coerce_issn_to_numeric_string(issn):
     if pd.isnull(issn):
         return np.nan
     assert (type(issn) is str), "ISSN must be a string."
-    issn = ''.join([i for i in issn if i.isnumeric() or i in {'X', 'x'}])
-    return issn.upper()
+    new_issn = ''.join([i for i in issn if i.isnumeric() or i in {'X', 'x'}])
+    new_issn = new_issn.upper()
+    if len(new_issn) != 8:
+        _logger.info(f"Skipping illegal issn: {issn}, (coerced {new_issn}).")
+        return np.nan
+    return new_issn
 
 
 def _get_issn_combined_str(paper, online):
