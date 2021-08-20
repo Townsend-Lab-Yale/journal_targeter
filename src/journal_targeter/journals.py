@@ -26,6 +26,17 @@ app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 _logger = logging.getLogger(__name__)
 
 
+def init_data(init_nltk=False, init_refs=False, init_demo=False):
+    if init_nltk:
+        nltk.download('wordnet', download_dir=paths.NLTK_DIR, quiet=True)
+    if init_refs:
+        from .reference import init_reference_data_from_cache
+        init_reference_data_from_cache()
+    if init_demo:
+        from .demo import init_demo
+        init_demo(app.config['DEMO_PREFIX'], overwrite=False)
+
+
 @app.cli.command('match')
 @click.option('-y', '--yaml', 'query_yaml',
               required=True, type=click.Path(exists=True),
@@ -45,12 +56,9 @@ def cli(ctx: click.core.Context, verbose):
     if verbose:
         _logger.setLevel("DEBUG")
     if ctx.invoked_subcommand not in {'setup', 'update-sources'}:
-        nltk.download('wordnet', download_dir=paths.NLTK_DIR, quiet=True)
-        from .reference import init_reference_data_from_cache
-        init_reference_data_from_cache()
+        init_data(init_nltk=True, init_refs=True)
     if ctx.invoked_subcommand in {'flask', 'gunicorn'}:
-        from .demo import init_demo
-        init_demo(app.config['DEMO_PREFIX'], overwrite=False)
+        init_data(init_demo=True)
 
 
 @cli.group()
