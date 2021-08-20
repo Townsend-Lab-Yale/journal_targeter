@@ -89,6 +89,9 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
     in_medline = in_medline.where(jfm['in_medline'].isnull(), jfm['in_medline'])
     jfm['in_medline'] = in_medline
 
+    # Fill sr_id
+    jfm['sr_id'] = jfm['uid'].map(MT.df['sr_id'])
+
     af['abbr'] = af['jid'].map(jfm['abbr'])
 
     return jfm, af, refs_df

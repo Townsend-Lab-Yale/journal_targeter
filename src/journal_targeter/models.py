@@ -7,6 +7,7 @@ from typing import Union, List
 import pandas as pd
 
 from .paths import METRICS_DIR
+from .sherpa_romeo import load_sherpa_id_map
 
 _logger = logging.getLogger(__name__)
 
@@ -281,6 +282,7 @@ class MasterTable:
             metric_cols.extend(new_metric_cols)
             other_cols.extend(new_other_cols)
             master = master.join(meta_tmp, how='left')
+        master['sr_id'] = load_sherpa_id_map()
         self.df = master
         self.metric_list = metric_cols
         self.other_meta_list = other_cols

@@ -106,6 +106,18 @@ def save_sherpa_id_map(sr: pd.DataFrame) -> pd.DataFrame:
     return sr_map
 
 
+def load_sherpa_id_map() -> pd.DataFrame:
+    """Save Sherpa Romeo ID -> NLM ID map as table.
+
+    Returns:
+        Table with columns: sr_id, nlmid.
+    """
+    map_path = os.path.join(paths.SHERPA_DIR, 'sherpa_romeo_map.tsv.gz')
+    sr_map = pd.read_csv(map_path, sep='\t', compression='gzip', dtype=str)
+    sr_map = sr_map.set_index('nlmid')['sr_id']
+    return sr_map
+
+
 def _get_records_from_sherpa_downloads(download_dir) -> List:
     paths = sorted(glob.glob(os.path.join(download_dir, '*.pickle.gz')))
     j_list = []
