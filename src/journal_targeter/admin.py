@@ -36,6 +36,7 @@ def copy_initial_data():
         ('demo', 'sars.yaml'),
         ('demo', 'example.yaml'),
         ('sherpa', 'sherpa_romeo_map.tsv.gz'),
+        ('doaj', 'doaj.tsv.gz'),
     ]:
         new_path = Path(paths.DATA_ROOT).joinpath(dir_name, file_name)
         if not new_path.exists():
