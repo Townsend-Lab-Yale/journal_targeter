@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 
 from . import paths
-from .reference import TM
 
 
 FIELD_NAMES = ['sr_id', 'title', 'issn_print', 'issn_online', 'issn_other']
@@ -80,6 +79,7 @@ def match_sherpa_titles_issns(download_dir: str,
         lambda v: v.split('|')[0] if type(v) is str else np.nan)
     sr['issn_print_merge'] = sr['issn_print'].where(pd.notnull, sr['issn_other1'])
     # 8min 30s with 4 processes. 12571 matched, 19614 unmatched. 1 invalid ISSN.
+    from .reference import TM
     matched = TM.lookup_uids_from_title_issn(sr['title'], sr['issn_print_merge'],
                                              sr['issn_online'],
                                              n_processes=n_processes)
