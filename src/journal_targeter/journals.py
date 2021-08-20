@@ -318,5 +318,9 @@ def _get_previous_env_path():
     return os.path.join(paths.CONFIG_DIR, backup_name)
 
 
+if click.get_os_args() == ['run']:
+    init_data(init_nltk=True, init_refs=True, init_demo=True)
+
+
 if __name__ == '__main__':
     cli(['build-demo'])
