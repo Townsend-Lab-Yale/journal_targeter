@@ -4,13 +4,13 @@ from typing import Optional
 
 import pandas as pd
 
-from .reference import TM
 from .paths import DOAJ_DIR
 
 _logger = logging.getLogger(__name__)
 
 
 def match_and_trim_doaj_csv(path_csv: str, n_processes: Optional[int]) -> pd.DataFrame:
+    from .reference import TM
     if not n_processes:
         n_processes = os.environ.get('N_PROCESSES', 1)
     df = pd.read_csv(path_csv, low_memory=False)
@@ -38,3 +38,10 @@ def match_and_trim_doaj_csv(path_csv: str, n_processes: Optional[int]) -> pd.Dat
     doaj.to_csv(out_path, sep='\t', index=True, compression='gzip',
                 encoding='utf8', line_terminator='\n')
     return doaj
+
+
+def load_doaj_table():
+    d = pd.read_csv(os.path.join(DOAJ_DIR, 'doaj.tsv.gz'), sep='\t',
+                    compression='gzip', lineterminator='\n', encoding='utf8')
+    d = d.set_index('nlmid').drop(columns=['title'])
+    return d

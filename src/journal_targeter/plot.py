@@ -311,11 +311,14 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     # col_names = {col: col_param_dict[col][0] for col in col_param_dict}
     sr_template = """'<a href="https://v2.sherpa.ac.uk/id/publication/' + sr_id """ \
         """+ '" target="_blank"><i class="fas fa-registered fa-fw pr-1"></i></a>'"""
+    doaj_template = """'<a href="' + url_doaj + '" target="_blank">""" \
+        """<i class="fab fa-creative-commons fa-fw pr-1"></i></a>'"""
     format_dict = {
         'journal_name': bkm.widgets.HTMLTemplateFormatter(
             template=f"""<a href="{_URL_NLM_USCORE}" target="_blank">"""  # <i class="fas fa-book pr-1"></i>
                      """<i class="fas fa-landmark fa-fw pr-1"></i></a>"""
                      f"""<%= sr_id == 'NaN' ? '<i class="fas fa-registered fa-fw pr-1 icon-empty"></i>' : {sr_template} %>"""
+                     f"""<%= url_doaj == 'NaN' ? '<i class="fab fa-creative-commons fa-fw pr-1 icon-empty"></i>' : {doaj_template} %>"""
                      """<span class="journal-cell" data-toggle="tooltip" title="<%= value %>">"""
                      """<%= value %></span>"""),
         'is_oa_str': bkm.widgets.StringFormatter(),

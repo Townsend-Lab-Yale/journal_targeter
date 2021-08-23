@@ -8,6 +8,7 @@ import pandas as pd
 
 from .paths import METRICS_DIR
 from .sherpa_romeo import load_sherpa_id_map
+from.doaj import load_doaj_table
 
 _logger = logging.getLogger(__name__)
 
@@ -283,6 +284,8 @@ class MasterTable:
             other_cols.extend(new_other_cols)
             master = master.join(meta_tmp, how='left')
         master['sr_id'] = load_sherpa_id_map()
+        doaj = load_doaj_table()
+        master = master.join(doaj, how='left')
         self.df = master
         self.metric_list = metric_cols
         self.other_meta_list = other_cols
