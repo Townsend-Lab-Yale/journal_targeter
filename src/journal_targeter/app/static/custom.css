@@ -52,14 +52,6 @@
     background-color: rgba(0, 158, 115, 0.5);
 }
 
-.neg-impact {
-    color: rgba(0, 0, 0, 0);
-}
-.pos-impact {
-    font-weight: normal;
-}
-
-
 .bk-tool-icon-hover {
     display: none;
 }

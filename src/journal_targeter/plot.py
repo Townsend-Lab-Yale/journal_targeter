@@ -2,7 +2,6 @@ from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
-import matplotlib as mpl
 import bokeh as bk
 from bokeh import io as bkio
 from bokeh import embed as bke
@@ -24,11 +23,28 @@ _DEFAULT_MATCH = 'sim_max'
 def get_bokeh_components(jf, af, refs_df):
     """Returns bokeh_js, bokeh_divs."""
     source_j, source_a, source_c = build_bokeh_sources(jf, af, refs_df)
+
+    filter_dict = {
+        'is_open': bkm.BooleanFilter(jf['is_open'].eq(True)),
+        'is_closed': bkm.BooleanFilter(~jf['is_open'].eq(True)),
+        'known_metric': bkm.CustomJSFilter(code="""
+            var indices = [];
+            for (var i = 0; i < source.get_length(); i++){
+                if (source.data['ax_impact'][i] < 0){
+                    indices.push(false);
+                } else {
+                    indices.push(true);
+                }
+            }
+            return indices;
+            """),
+    }
+
     plots = OrderedDict()
-    plots['icats'] = plot_icats(source_j, source_a, source_c)
+    plots['icats'] = plot_icats(source_j, source_a, source_c, filter_dict=filter_dict)
     plots['table'] = plot_datatable(source_j)
-    plots['fit'] = plot_fit_scatter(source_j)
-    plots['prospect'] = plot_prospect_scatter(source_j)
+    plots['fit'] = plot_fit_scatter(source_j, filter_dict=filter_dict)
+    plots['prospect'] = plot_prospect_scatter(source_j, filter_dict=filter_dict)
     bokeh_js, bokeh_divs = bke.components(plots)
     return bokeh_js, bokeh_divs
 
@@ -38,9 +54,11 @@ def build_bokeh_sources(jf, af, refs_df):
     # JOURNALS
     jfs = jf.copy()
     for metric in MT.metric_list:
-        jfs[f"{metric}_neg"] = jfs[metric].fillna(-1)
-        jfs[f'p_{metric}_neg'] = jfs[f'p_{metric}'].fillna(-1)
-        jfs[f'{metric}_str'] = jfs[metric].map(lambda v: 'unknown' if pd.isnull(v) else v)
+        # Replace nans with -1 as workaround for bokeh nan sorting
+        jfs[metric] = jfs[metric].fillna(-1)
+        jfs[f'p_{metric}'] = jfs[f'p_{metric}'].fillna(-1)
+        # Create column for hovertool values
+        jfs[f'{metric}_str'] = jfs[metric].map(lambda v: 'unknown' if v < 0 else f"{v:0.1f}")
         _mark_dominant_journals(jfs, metric)
 
     # checkmark columns
@@ -56,11 +74,10 @@ def build_bokeh_sources(jf, af, refs_df):
     jfs['loc_title'] = 'title'
     jfs['ax_impact'] = jfs[_DEFAULT_IMPACT]  # redundant column for metric toggling
     jfs['dominant'] = jfs[f'dominant_{_DEFAULT_IMPACT}']
-    jfs['ax_impact_bg'] = (jfs[_DEFAULT_IMPACT].isnull()).map({True: 'whitesmoke', False: 'white'})
+    jfs['ax_impact_bg'] = (jfs[_DEFAULT_IMPACT] < 1).map({True: 'whitesmoke', False: 'white'})
     jfs['impact_max'] = jfs[_DEFAULT_IMPACT].max()
     jfs['ax_match'] = jfs[_DEFAULT_MATCH]  # redundant column for suitability toggling
     jfs['prospect'] = jfs[f"p_{_DEFAULT_IMPACT}"]
-    jfs['prospect_neg'] = jfs[f"p_{_DEFAULT_IMPACT}_neg"]
     jfs['label_metric'] = jfs[f"label_{_DEFAULT_IMPACT}"]
 
     source_j = bkm.ColumnDataSource(jfs)
@@ -79,7 +96,7 @@ def build_bokeh_sources(jf, af, refs_df):
     return source_j, source_a, source_c
 
 
-def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
+def plot_prospect_scatter(source_j, show_plot=False, filter_dict=None):
     TOOLS = "pan,wheel_zoom,box_select,reset,tap"
     plot_width, plot_height = 800, 400
     default_metric_label = _DEFAULT_IMPACT
@@ -96,7 +113,7 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
     p1.add_layout(labels)
     p1.toolbar.logo = None
     impact_kws = dict(y='ax_impact', x='prospect')
-    _add_scatter(fig=p1, source=source_j, **impact_kws)
+    _add_scatter(fig=p1, source=source_j, filter_dict=filter_dict, **impact_kws)
 
     # WIDGETS
     option_dict = {i: i for i in MT.metric_list}
@@ -112,7 +129,6 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
         const option_dict = %s;
         const new_data = Object.assign({}, source.data);
         new_data.prospect = source.data['p_'.concat(option_dict[option])];
-        new_data.prospect_neg = source.data['p_'.concat(option_dict[option], '_neg')];
         new_data.ax_impact = source.data[option_dict[option]];
         new_data.label_metric = source.data['label_'.concat(option_dict[option])];
         new_data.dominant = source.data['dominant_'.concat(option_dict[option])];
@@ -137,22 +153,18 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
         const impact_vals = source.data[impact_col];
         const cat_vals = source.data['CAT']
         let prospects = [];
-        let prospects_neg = [];
         for (let ind = 0; ind < impact_vals.length; ind++){
             let impact = impact_vals[ind];
             if (impact >= 0){
                 let cat = cat_vals[ind];
                 let p = cat / (weight * impact + cat);
                 prospects.push(p);
-                prospects_neg.push(p);
             }
             else {
-                prospects.push(null);
-                prospects_neg.push(-1);
+                prospects.push(-1);
             }
         }
         new_data.prospect = prospects;
-        new_data.prospect_neg = prospects_neg;
         source.data = new_data;
     """ % option_dict))
 
@@ -162,7 +174,7 @@ def plot_prospect_scatter(source_j, show_plot=False, **kwargs):
     return grid
 
 
-def plot_fit_scatter(source_j, show_plot=False, **kwargs):
+def plot_fit_scatter(source_j, show_plot=False, filter_dict=None):
     """Scatter plot: CAT vs CiteScore."""
     TOOLS = "pan,wheel_zoom,box_select,reset"
     plot_width, plot_height = 400, 400
@@ -186,12 +198,12 @@ def plot_fit_scatter(source_j, show_plot=False, **kwargs):
                     **fig_kws)
     p1.xaxis.ticker = ticker_cat
     impact_kws = dict(x=cat_jitter, y='ax_impact')
-    _add_scatter(p1, source=source_j, **impact_kws)
+    _add_scatter(p1, source=source_j, filter_dict=filter_dict, **impact_kws)
 
     # SIM VS IMPACT FIGURE (p2)
     p2 = bkp.figure(x_axis_label=label_dict[_DEFAULT_MATCH], **fig_kws)
     match_kws = dict(x='ax_match', y='ax_impact')
-    _add_scatter(fig=p2, source=source_j, **match_kws)
+    _add_scatter(fig=p2, source=source_j, filter_dict=filter_dict, **match_kws)
 
     # WIDGETS
     option_dict = {label_dict[i]: i for i in label_dict}
@@ -243,14 +255,15 @@ def plot_fit_scatter(source_j, show_plot=False, **kwargs):
     return grid
 
 
-def _add_scatter(fig=None, source=None, **kwargs):
+def _add_scatter(fig=None, source=None, filter_dict=None, **kwargs):
     """Add circle renderers for open and closed journals, inc hover + tap."""
     cmap_oa = bkt.factor_cmap('is_oa_str', palette=['red', 'blue'], factors=['✔', ''])
-    is_open = np.equal(source.data['is_open'], True)  # will interpret nan as False
     view_closed = bkm.CDSView(source=source,
-                              filters=[bkm.BooleanFilter(~is_open)])
+                              filters=[filter_dict['is_closed'],
+                                       filter_dict['known_metric']])
     view_open = bkm.CDSView(source=source,
-                            filters=[bkm.BooleanFilter(is_open)])
+                            filters=[filter_dict['is_open'],
+                                     filter_dict['known_metric']])
     scatter_kws = dict(size=10, color=cmap_oa, source=source)
     closed_kws = dict(legend_label='closed', fill_alpha=0.3, view=view_closed)
     open_kws = dict(legend_label='open', fill_alpha=0.6, view=view_open)
@@ -280,9 +293,9 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     w_xs = 30
 
     metric_dict = OrderedDict({
-        f"{i}_neg": (i, w_sm) for i in MT.metric_list
+        f"{i}": (i, w_sm) for i in MT.metric_list
     })
-    metric_dict['CiteScore_neg'] = ('CiteScore', w_md)
+    metric_dict['CiteScore'] = ('CiteScore', w_md)
     # metric_dict['Influence'] = ('Inf', w_sm)
     col_param_dict = OrderedDict({
         'journal_name': ('Journal', w_journal),
@@ -294,7 +307,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     })
     col_param_dict.update(metric_dict)
     col_param_dict.update({
-        'prospect_neg': ('P', w_sm),
+        'prospect': ('P', w_sm),
         'is_oa_str': ('OA', w_sm),
         'in_ml_str': ('ML', w_sm),
         'in_pmc_str': ('PMC', w_sm),
@@ -325,9 +338,11 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
         'in_ml_str': bkm.widgets.StringFormatter(),
         'in_pmc_str': bkm.widgets.StringFormatter(),
     }
-    format_dict.update({i: _get_custom_formatter(dp=0) for i in ['sim_sum', 'sim_max']})
-    format_dict.update({i: _get_custom_formatter(dp=1) for i in list(metric_dict) + ['conf_pc']})
-    format_dict.update({'prospect_neg': _get_custom_formatter(dp=2)})
+    format_dict.update({i: _get_formatter_mark_blank_round_dp(dp=0) for i in
+                        ['sim_sum', 'sim_max']})
+    format_dict.update({i: _get_formatter_mark_blank_round_dp(dp=1) for i in
+                        list(metric_dict) + ['conf_pc']})
+    format_dict.update({'prospect': _get_formatter_mark_blank_round_dp(dp=2)})
     table_cols = OrderedDict({
         col: dict(width=col_param_dict[col][1],
                   formatter=format_dict.get(col,
@@ -354,15 +369,14 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     return data_table
 
 
-def _get_custom_formatter(dp=1):
+def _get_formatter_mark_blank_round_dp(dp=1):
     scalar = 10 ** dp
     return bkm.widgets.HTMLTemplateFormatter(
-        template=f"""<span class="col-metric """
-                 """<%= value == -1 ? 'neg-impact' : 'pos-impact' %> ">"""
-                 f"""<%= Math.round(value * {scalar}) / {scalar} %></span>""")
+        template=f"""<span class="col-metric">"""
+                 f"""<%= value < 0 ? '' : Math.round(value * {scalar}) / {scalar} %></span>""")
 
 
-def plot_icats(source_j, source_a, source_c, show_plot=False):
+def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None):
     """Create interactive ICATS scatter plot.
 
     Returns:
@@ -418,9 +432,11 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
                      x_range=(impact_max_initial, 0), y_range=p.y_range,
                      plot_width=width_l, plot_height=plot_height,
                      x_axis_label=_DEFAULT_IMPACT, x_axis_location="above")
-    r_ibg = p_l.hbar(y='jid', height=1, left=0, right='impact_max', source=source_j,
-                     color='ax_impact_bg')
-    r_i = p_l.hbar(y='jid', height=0.4, left=0, right='ax_impact', source=source_j)
+    r_ibg = p_l.hbar(y='jid', height=1, left=0, right='impact_max',
+                     source=source_j, color='ax_impact_bg')
+    view_known = bkm.CDSView(source=source_j, filters=[filter_dict['known_metric']])
+    r_i = p_l.hbar(y='jid', height=0.4, left=0, right='ax_impact',
+                   source=source_j, view=view_known)
     taptool_impact = p_l.select(type=bkm.TapTool)
     taptool_impact.callback = bkm.OpenURL(url=_URL_NLM_BK)
 
@@ -445,7 +461,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False):
             let na_vals = [];
             let max_vals = [];
             for (var i = 0; i < impact_vals.length; i++) {
-                if (isNaN(impact_vals[i])){
+                if (impact_vals[i] < 0){
                     na_vals.push('whitesmoke');
                 }
                 else {
