@@ -60,6 +60,8 @@ def build_bokeh_sources(jf, af, refs_df):
         # Create column for hovertool values
         jfs[f'{metric}_str'] = jfs[metric].map(lambda v: 'unknown' if v < 0 else f"{v:0.1f}")
         _mark_dominant_journals(jfs, metric)
+    jfs['doaj_seal'] = jfs['apc'].map({'Yes': 1, 'No': 0, np.nan: -1})
+    jfs['apc'] = jfs['apc'].map({'Yes': 1, 'No': 0, np.nan: -1})
 
     # checkmark columns
     jfs['is_oa_str'] = jfs['is_open'].map({True: '✔', False: '', np.nan: '?'})
@@ -288,6 +290,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
         'default_sort': 'descending',
     }
     w_journal = 300
+    w_doaj = 110
     w_md = 60
     w_sm = 40
     w_xs = 30
@@ -304,10 +307,13 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
         'abstract': ('A', w_xs),
         'title': ('T', w_xs),
         'both': ('A&T', w_xs),
+        'doaj_seal': ('DOAJ', w_doaj),
     })
     col_param_dict.update(metric_dict)
     col_param_dict.update({
         'prospect': ('P', w_sm),
+        'apc': ('apc', w_sm),
+        'n_weeks_avg': ('weeks', w_sm),
         'is_oa_str': ('OA', w_sm),
         'in_ml_str': ('ML', w_sm),
         'in_pmc_str': ('PMC', w_sm),
@@ -321,25 +327,64 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     table_width = sum([i[1] for i in col_param_dict.values()]) + index_width
 
     # url_template = """<a href="<%= value %>" target="_blank"><%= value %></a>"""
-    # col_names = {col: col_param_dict[col][0] for col in col_param_dict}
+
     sr_template = """'<a href="https://v2.sherpa.ac.uk/id/publication/' + sr_id """ \
         """+ '" target="_blank"><i class="fas fa-registered fa-fw pr-1"></i></a>'"""
-    doaj_template = """'<a href="' + url_doaj + '" target="_blank">""" \
-        """<i class="fab fa-creative-commons fa-fw pr-1"></i></a>'"""
+
+    cc_template = """'<a href="' + url_doaj + '" target="_blank">""" \
+                  f"""<i class="fab fa-creative-commons fa-fw pr-1"></i></a>'"""
+
+    title_template = (
+        f"""<a href="{_URL_NLM_USCORE}" target="_blank">"""  # <i class="fas fa-book pr-1"></i>
+        """<i class="fas fa-landmark fa-fw pr-1"></i></a>"""
+        """<%= sr_id == 'NaN' ? '<i class="fas fa-registered fa-fw pr-1 """
+        f"""icon-empty"></i>' : {sr_template} %><%= url_doaj == 'NaN' ? """
+        f"""'<i class="fab fa-creative-commons fa-fw pr-1 icon-empty"></i>' : {cc_template} %>"""
+        """<span class="journal-cell" data-toggle="tooltip" title="<%= value %>">"""
+        """<%= value %></span>"""
+    )
+
+    _fragment_seal = """<span data-toggle="tooltip" title="Awarded DOAJ Seal">""" \
+        """<i class="fas fa-award fa-fw fa-fw pr-1"></i></span>"""
+    _fragment_tick = """<span data-toggle="tooltip" title="DOAJ compliant">""" \
+        """<a href="' + url_doaj + '" target="_blank">""" \
+        """<i class="far fa-check-circle fa-fw pr-1"></i></a></span>"""
+
+    _fragment_auth_y = '<span data-toggle="tooltip" title="Author holds copyright">' \
+                       '<i class="fas fa-user fa-fw pr-1"></i></span>'
+    _fragment_auth_n = '<span data-toggle="tooltip" title="Author does not hold copyright">' \
+                       '<i class="fas fa-user-slash fa-fw pr-1"></i></span>'
+
+    _fragment_apc_1 = """'<span data-toggle="tooltip" title="Max APC: ' + apc_val + '">""" \
+                      """<i class="fas fa-dollar-sign fa-fw pr-1"></i></span>'"""
+    _fragment_apc_0 = '<span data-toggle="tooltip" title="No processing charge">' \
+                      '<i class="fas fa-gift fa-fw pr-1"></i></span>'
+
+    _fragment_preserve = """'<span data-toggle="tooltip" title="Archived in: ' + preservation + '">""" \
+                         """<i class="fas fa-archive fa-fw pr-1"></i></span>'"""
+    _fragment_weeks = """'<span data-toggle="tooltip" title="Avg weeks to publication">""" \
+                      """' + n_weeks_avg + 'w</span>'"""
+
+    doaj_template = (
+        f"""<%= doaj_compliant == 'Yes' ? '{_fragment_tick}' : '' %>"""
+        f"""<%= doaj_seal == 1 ? '{_fragment_seal}' : '' %>"""
+        f"""<%= author_copyright == 'Yes' ? '{_fragment_auth_y}' : '' %>"""
+        f"""<%= author_copyright == 'No' ? '{_fragment_auth_n}' : '' %>"""
+        f"""<%= apc == 1 ? {_fragment_apc_1} : '' %>"""
+        f"""<%= apc == 0 ? '{_fragment_apc_0}' : '' %>"""
+        f"""<%= preservation == 'NaN' ? '' : {_fragment_preserve} %>"""
+        f"""<%= isNaN(n_weeks_avg) ? '' : {_fragment_weeks} %>"""
+    )
+
     format_dict = {
-        'journal_name': bkm.widgets.HTMLTemplateFormatter(
-            template=f"""<a href="{_URL_NLM_USCORE}" target="_blank">"""  # <i class="fas fa-book pr-1"></i>
-                     """<i class="fas fa-landmark fa-fw pr-1"></i></a>"""
-                     f"""<%= sr_id == 'NaN' ? '<i class="fas fa-registered fa-fw pr-1 icon-empty"></i>' : {sr_template} %>"""
-                     f"""<%= url_doaj == 'NaN' ? '<i class="fab fa-creative-commons fa-fw pr-1 icon-empty"></i>' : {doaj_template} %>"""
-                     """<span class="journal-cell" data-toggle="tooltip" title="<%= value %>">"""
-                     """<%= value %></span>"""),
+        'journal_name': bkm.widgets.HTMLTemplateFormatter(template=title_template),
+        'doaj_seal': bkm.widgets.HTMLTemplateFormatter(template=doaj_template),
         'is_oa_str': bkm.widgets.StringFormatter(),
         'in_ml_str': bkm.widgets.StringFormatter(),
         'in_pmc_str': bkm.widgets.StringFormatter(),
     }
     format_dict.update({i: _get_formatter_mark_blank_round_dp(dp=0) for i in
-                        ['sim_sum', 'sim_max']})
+                        ['sim_sum', 'sim_max', 'apc']})
     format_dict.update({i: _get_formatter_mark_blank_round_dp(dp=1) for i in
                         list(metric_dict) + ['conf_pc']})
     format_dict.update({'prospect': _get_formatter_mark_blank_round_dp(dp=2)})
