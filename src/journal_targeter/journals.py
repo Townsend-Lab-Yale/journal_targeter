@@ -10,10 +10,9 @@ import pathlib
 import subprocess
 from typing import Union
 
-import nltk
 import click
 import dotenv
-from flask import Flask, render_template
+from flask import render_template
 from flask.cli import FlaskGroup
 
 from . import paths
@@ -22,13 +21,12 @@ from .admin import copy_initial_data
 
 
 copy_initial_data()
+_APP_LOCATION = 'journal_targeter.journals:app'
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 _logger = logging.getLogger(__name__)
 
 
-def init_data(init_nltk=False, init_refs=False, init_demo=False):
-    if init_nltk:
-        nltk.download('wordnet', download_dir=paths.NLTK_DIR, quiet=True)
+def init_data(init_refs=False, init_demo=False):
     if init_refs:
         from .reference import init_reference_data_from_cache
         init_reference_data_from_cache()
@@ -55,8 +53,9 @@ def flask_match(**kwargs):
 def cli(ctx: click.core.Context, verbose):
     if verbose:
         _logger.setLevel("DEBUG")
-    if ctx.invoked_subcommand not in {'setup', 'update-sources'}:
-        init_data(init_nltk=True, init_refs=True)
+    # ref init process for update-sources and gunicorn happens elsewhere
+    if ctx.invoked_subcommand not in {'setup', 'update-sources', 'gunicorn'}:
+        init_data(init_refs=True)
     if ctx.invoked_subcommand in {'flask', 'gunicorn'}:
         init_data(init_demo=True)
 
@@ -250,7 +249,7 @@ def gunicorn(gunicorn_args):
     if not gunicorn_path.exists():
         click.secho("gunicorn not found.", fg='red')
         return
-    cmdline = [str(gunicorn_path), ] + list(gunicorn_args) + ['journal_targeter.journals:app']
+    cmdline = [str(gunicorn_path), ] + list(gunicorn_args) + [_APP_LOCATION]
     click.echo(f"Invoking: {' '.join(cmdline)}")
     subprocess.call(cmdline)
 
@@ -318,8 +317,16 @@ def _get_previous_env_path():
     return os.path.join(paths.CONFIG_DIR, backup_name)
 
 
-if click.get_os_args() == ['run']:
-    init_data(init_nltk=True, init_refs=True, init_demo=True)
+def _app_requires_data_init():
+    """Check if app is being started, which requires proactive data init."""
+    args = click.get_os_args()
+    if len(args) and args[0] in {'run'} or _APP_LOCATION in args:
+        return True
+    return False
+
+
+if _app_requires_data_init():
+    init_data(init_refs=True, init_demo=True)
 
 
 if __name__ == '__main__':
