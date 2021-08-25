@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from importlib import resources
 
-import dotenv
+import nltk
 from flask import Flask
 
 from . import paths
@@ -45,3 +45,4 @@ def copy_initial_data():
                 shutil.copy(path, new_path)
     if added_data:
         _logger.info(f"Copied reference data to {paths.DATA_ROOT}: {added_data}.")
+    nltk.download('wordnet', download_dir=paths.NLTK_DIR, quiet=True)

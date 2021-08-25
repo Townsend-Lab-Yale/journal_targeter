@@ -32,6 +32,7 @@ dependencies:
   - line_profiler
   - yaml
   - gunicorn
+  - gevent
   - sphinx
   - zeep
   - flask-markdown
