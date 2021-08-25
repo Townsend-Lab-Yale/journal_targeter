@@ -60,7 +60,7 @@ def build_bokeh_sources(jf, af, refs_df):
         # Create column for hovertool values
         jfs[f'{metric}_str'] = jfs[metric].map(lambda v: 'unknown' if v < 0 else f"{v:0.1f}")
         _mark_dominant_journals(jfs, metric)
-    jfs['doaj_seal'] = jfs['apc'].map({'Yes': 1, 'No': 0, np.nan: -1})
+    jfs['doaj_seal'] = jfs['doaj_seal'].map({'Yes': 1, 'No': 0, np.nan: -1})
     jfs['apc'] = jfs['apc'].map({'Yes': 1, 'No': 0, np.nan: -1})
 
     # checkmark columns
@@ -312,9 +312,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
     col_param_dict.update(metric_dict)
     col_param_dict.update({
         'prospect': ('P', w_sm),
-        'apc': ('apc', w_sm),
-        'n_weeks_avg': ('weeks', w_sm),
-        'is_oa_str': ('OA', w_sm),
+        # 'is_oa_str': ('OA', w_sm),
         'in_ml_str': ('ML', w_sm),
         'in_pmc_str': ('PMC', w_sm),
         # 'conf_title': ('cT', w_sm),
@@ -384,7 +382,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
         'in_pmc_str': bkm.widgets.StringFormatter(),
     }
     format_dict.update({i: _get_formatter_mark_blank_round_dp(dp=0) for i in
-                        ['sim_sum', 'sim_max', 'apc']})
+                        ['sim_sum', 'sim_max']})
     format_dict.update({i: _get_formatter_mark_blank_round_dp(dp=1) for i in
                         list(metric_dict) + ['conf_pc']})
     format_dict.update({'prospect': _get_formatter_mark_blank_round_dp(dp=2)})
