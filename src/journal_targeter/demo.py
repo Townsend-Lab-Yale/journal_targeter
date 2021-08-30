@@ -87,6 +87,7 @@ def create_demo_data_from_yaml(yaml_path, ris_path, prefix=None, save_yaml=True)
     if not os.path.exists(ris_path):
         raise FileNotFoundError('Invalid query YAML path.')
     ris_name = os.path.basename(ris_path)
+    demo_dict.update({'ris_name': ris_name})
     dest_ris_path = os.path.join(DEMO_DIR, ris_name)
     if os.path.exists(dest_ris_path):
         _logger.info("Using existing ris file in demo directory.")
