@@ -166,4 +166,24 @@
 {% block scripts %}
 {{ super() }}
 {{ bokeh_js|safe }}
+<script>
+    let timer = setInterval(function() {
+        let attempts = 0;
+        const table_cells = $('.slick-cell');
+        const tooltip_objs = $('[data-toggle="tooltip"]');
+        if (table_cells.length > 0) {
+            clearInterval(timer);
+            console.log("Initializing tooltips.");
+            tooltip_objs.tooltip();
+        } else {
+            attempts++;
+            if (attempts > 100) {
+                clearInterval(timer);
+                console.log("Giving up on tooltip initialization.");
+                return;
+            }
+            console.log(`No table cell elements yet (attempt ${attempts}).`);
+        }
+    }, 100)
+</script>
 {% endblock %}
