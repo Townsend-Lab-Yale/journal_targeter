@@ -38,6 +38,7 @@ dependencies:
   - flask-markdown
   - openpyxl
   - appdirs
+  - Flask-SQLAlchemy
   - pip:
       - iso4
       - RISparser
@@ -46,3 +47,4 @@ dependencies:
       - visitor
       - Flask-Session
       - pytest-check
+      - flask-migrate

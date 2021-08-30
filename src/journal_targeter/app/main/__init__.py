@@ -4,6 +4,7 @@ from flask import Blueprint, current_app
 main = Blueprint('main', __name__)
 
 from . import views, errors
+from .. import models
 
 
 @main.app_context_processor

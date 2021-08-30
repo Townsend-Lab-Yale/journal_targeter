@@ -21,6 +21,11 @@ class Config:
     SESSION_TYPE = 'filesystem'
     SESSION_FILE_DIR = os.environ.get('SESSION_FILE_DIR', paths.SESSION_DIR)
     MAX_CONTENT_LENGTH = 1024 * 1024  # 1MB request size limit, for uploads
+
+    SQLALCHEMY_DATABASE_URI = \
+        'sqlite:///' + os.path.join(paths.DATA_ROOT, 'db.sqlite')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.googlemail.com')
     MAIL_PORT = int(os.environ.get('MAIL_PORT', '587'))
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in \
