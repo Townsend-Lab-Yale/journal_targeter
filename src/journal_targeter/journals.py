@@ -20,10 +20,10 @@ from .app import create_app
 from .admin import copy_initial_data
 
 
-copy_initial_data()
 _APP_LOCATION = 'journal_targeter.journals:app'
-app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 _logger = logging.getLogger(__name__)
+app = create_app(os.getenv('FLASK_CONFIG') or 'default')
+copy_initial_data(app)
 
 
 def init_data(init_refs=False, init_demo=False):
