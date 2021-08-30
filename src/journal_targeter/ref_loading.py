@@ -106,11 +106,15 @@ def identify_user_references(ris_path):
         ...
     """
     _logger.info(f"Loading references file.")
-    df = _read_ris_file(ris_path)
-    journal_names_uniq = df.journal.unique()
-    if any([pd.isnull(i) for i in journal_names_uniq]):
-        raise BadRisException("At least one record is missing a journal name.")
+    df = _read_ris_file(ris_path)  # type: pd.DataFrame
+    n_null_titles = df.journal.isnull().sum()
+    if n_null_titles:
+        _logger.info(f"Dropping {n_null_titles} rows with missing journal titles.")
+        # if any([pd.isnull(i) for i in journal_names_uniq]):
+        #     raise BadRisException("At least one record is missing a journal name.")
+        df.dropna(axis='rows', subset=['journal'], inplace=True)
     # Add matching info (uid, categ, single_match) to user refs table
+    journal_names_uniq = df.journal.unique()
     from .reference import TM
     m = TM.match_titles(journal_names_uniq)
     _logger.info(f"Matched {m.single_match.sum()} out of {len(m)} cited journals.")
