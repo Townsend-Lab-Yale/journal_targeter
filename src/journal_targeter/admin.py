@@ -27,6 +27,7 @@ _REF_FILES = [
         ('doaj', 'doaj.tsv.gz', 'doaj'),
         ('', 'updates.yaml', 'na'),
     ]
+REFS_PKG = 'journal_targeter.refs'
 
 
 def refresh_data(app: Flask = None, rebuild_scopus=False):
@@ -57,8 +58,7 @@ def copy_initial_data(app):
     for dir_name, file_name, source in _REF_FILES:
         new_path = Path(paths.DATA_ROOT).joinpath(dir_name, file_name)
         if repo_newer[source] or not new_path.exists():
-            refs_str = 'journal_targeter.refs'
-            resource_dir = f'{refs_str}.{dir_name}' if dir_name else refs_str
+            resource_dir = f'{REFS_PKG}.{dir_name}' if dir_name else REFS_PKG
             with resources.path(resource_dir, file_name) as path:
                 shutil.copy2(path, new_path)
             added_data.append(file_name)
@@ -79,7 +79,7 @@ def copy_initial_data(app):
 
 
 def _get_source_dates_repo():
-    with resources.path(f'journal_targeter.refs', 'updates.yaml') as path:
+    with resources.path(REFS_PKG, 'updates.yaml') as path:
         with open(path, 'r') as infile:
             dates_repo = yaml.load(infile, yaml.SafeLoader)
 
