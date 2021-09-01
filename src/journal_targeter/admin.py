@@ -11,6 +11,7 @@ import yaml
 from flask import Flask
 
 from . import paths
+from .app import db
 from .app.models import Source
 
 
@@ -43,7 +44,6 @@ def copy_initial_data(app):
     os.makedirs(paths.DATA_ROOT, exist_ok=True)
     os.makedirs(paths.METRICS_DIR, exist_ok=True)
     os.makedirs(paths.PUBMED_DIR, exist_ok=True)
-    from .app import db
     with app.app_context():
         db.create_all()
     dates_repo = _get_source_dates_repo()
@@ -66,13 +66,8 @@ def copy_initial_data(app):
             if source not in dates_repo:
                 continue
             with app.app_context():
-                if source in dates_user:
-                    s = Source.query.filter_by(source_name=source).one()
-                    s.update_time = dates_repo[source]
-                else:
-                    s = Source(source_name=source, update_time=dates_repo[source])
-                db.session.add(s)
-                db.session.commit()
+                Source.store_update(source_name=source,
+                                    update_time=dates_repo[source])
     if added_data:
         _logger.info(f"Copied reference data to {paths.DATA_ROOT}: {added_data}.")
     nltk.download('wordnet', download_dir=paths.NLTK_DIR, quiet=True)

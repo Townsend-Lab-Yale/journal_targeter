@@ -18,6 +18,7 @@ from flask_migrate import Migrate
 
 from . import paths
 from .app import create_app, db
+from .app.models import Source
 from .admin import copy_initial_data
 
 
@@ -230,6 +231,8 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
                         col_other=['is_open'])
         tm_scop = TableMatcher(scop)
         tm_scop.match_missing(n_processes=ncpus, save=True)
+        with app.app_context():
+            Source.updated_now('scopus')
     if jcr_path:
         from journal_targeter.helpers import load_jcr_json
         from journal_targeter.models import RefTable, TableMatcher
@@ -241,6 +244,8 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
                            index_is_uid=False)
         jcr_tm = TableMatcher(jcr_ref)
         jcr_tm.match_missing(n_processes=ncpus, save=True)
+        with app.app_context():
+            Source.updated_now('jcr')
 
 
 @cli.command(context_settings=dict(ignore_unknown_options=True,))
