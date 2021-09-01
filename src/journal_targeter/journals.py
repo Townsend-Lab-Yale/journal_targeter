@@ -14,15 +14,17 @@ import click
 import dotenv
 from flask import render_template
 from flask.cli import FlaskGroup
+from flask_migrate import Migrate
 
 from . import paths
-from .app import create_app
+from .app import create_app, db
 from .admin import copy_initial_data
 
 
 _APP_LOCATION = 'journal_targeter.journals:app'
 _logger = logging.getLogger(__name__)
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
+migrate = Migrate(app, db)
 copy_initial_data(app)
 
 
