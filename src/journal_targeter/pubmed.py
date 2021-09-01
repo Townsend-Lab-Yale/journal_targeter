@@ -518,9 +518,14 @@ def load_pubmed_journals(api_key: Union[str, None] = None):
     update time will be stored in db source table.
 
     Args:
-        api_key: NCBI Entrez API Key (optional). API_KEY in environment will be
-            used as fallback if present.
+        api_key: NCBI Entrez API Key (optional). Fallback priority: API_KEY in
+            current_app.config, then environment.
     """
+    if api_key is None:
+        if current_app:
+            api_key = current_app.config['API_KEY']
+        else:
+            api_key = os.environ.get('API_KEY', None)
     if not os.path.exists(paths.PM_MEDLINE_PATH):
         _download_pubmed_reference()
     pm = pd.DataFrame.from_records(_yield_records(paths.PM_MEDLINE_PATH))
