@@ -20,7 +20,7 @@ from . import paths
 from .app import create_app, db
 from .app.models import Source
 from .admin import copy_initial_data
-
+from .reference import init_reference_data_from_cache
 
 _APP_LOCATION = 'journal_targeter.journals:app'
 _logger = logging.getLogger(__name__)
@@ -31,8 +31,8 @@ copy_initial_data(app)
 
 def init_data(init_refs=False, init_demo=False):
     if init_refs:
-        from .reference import init_reference_data_from_cache
-        init_reference_data_from_cache()
+        with app.app_context():
+            init_reference_data_from_cache()
     if init_demo:
         from .demo import init_demo
         init_demo(app.config['DEMO_PREFIX'], overwrite=False)
@@ -204,14 +204,12 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
     if update_nlm:
         from . import pubmed
         api_key = app.config['API_KEY']
-        if api_key:
-            _logger.info('API key present.')
-        else:
-            _logger.info('API key absent.')
+        _logger.info('API key present.') if api_key else _logger.info('API key absent.')
         medline_updated = pubmed.download_and_compare_pubmed_reference()
         tm_pickle_exists = os.path.exists(paths.TM_PICKLE_PATH)
         if medline_updated or not tm_pickle_exists:
-            pm_full = pubmed.load_pubmed_journals(api_key=api_key)
+            with app.app_context():
+                pm_full = pubmed.load_pubmed_journals(api_key=api_key)
             tm = pubmed.TitleMatcher().init_data(pm_full)  # type: pubmed.TitleMatcher
             tm.save_pickle()
         else:
@@ -219,7 +217,8 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
     if scopus_path or jcr_path:
         # initialize TitleMatcher data
         from .reference import TM
-        TM.init_data()
+        with app.app_context():
+            TM.init_data()
     if scopus_path:
         from journal_targeter import scopus
         from journal_targeter.models import RefTable, TableMatcher

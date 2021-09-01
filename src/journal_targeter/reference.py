@@ -10,6 +10,7 @@ _logger = logging.getLogger(__name__)
 
 
 def init_reference_data_from_cache():
+    """Populate data. Use within app context to store pubmed update time."""
     _logger.info("Loading reference data for matching and metadata lookups.")
     pm_ext = load_pubmed_journals()
     MT.init_data(pm_ext)
