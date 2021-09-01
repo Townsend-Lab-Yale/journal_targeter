@@ -48,7 +48,9 @@ from flask import current_app
 
 from . import paths
 from .helpers import get_issn_safe, get_issn_comb, get_clean_lowercase, grouper, \
-    coerce_issn_to_numeric_string, get_md5, pickle_seems_ok
+    coerce_to_valid_issn_or_nan, get_md5, pickle_seems_ok
+from .app import db
+from .app.models import Source
 
 
 URL_ESUMMARY = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi'
@@ -404,11 +406,11 @@ class TitleMatcher:
     @staticmethod
     def _get_issn_query_table(issn_print=None, issn_online=None):
         # BUILD QUERY DATAFRAME
-        issn_print = [coerce_issn_to_numeric_string(i) for i in issn_print]
+        issn_print = [coerce_to_valid_issn_or_nan(i) for i in issn_print]
         data = {'issn_print': issn_print}
         has_issn_online = issn_online is not None
         if has_issn_online:
-            issn_online = [coerce_issn_to_numeric_string(i) for i in issn_online]
+            issn_online = [coerce_to_valid_issn_or_nan(i) for i in issn_online]
             data.update({'issn_online': issn_online})
             issn_comb = get_issn_comb(pd.Series(issn_print), pd.Series(issn_online))
             data.update({'issn_comb': issn_comb})

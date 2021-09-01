@@ -83,22 +83,27 @@ def get_issn_comb(print_series, online_series, drop_dups=True):
         return issn_comb
 
 
-def coerce_issn_to_numeric_string(issn):
-    """
-    >>> coerce_issn_to_numeric_string('123-45678')
+def coerce_to_valid_issn_or_nan(issn):
+    """Gives 8-length valid ISSN string or nan.
+
+    >>> coerce_to_valid_issn_or_nan('123-45678')
     '12345678'
-    >>> coerce_issn_to_numeric_string('004-4586X')
+    >>> coerce_to_valid_issn_or_nan('004-4586X')
     '0044586X'
-    >>> coerce_issn_to_numeric_string('***-*****')
-    ''
+    >>> coerce_to_valid_issn_or_nan('1234567Y')
+    nan
+    >>> coerce_to_valid_issn_or_nan('***-*****')
+    nan
+    >>> coerce_to_valid_issn_or_nan('')
+    nan
     """
-    if pd.isnull(issn):
+    if pd.isnull(issn) or issn == '':
         return np.nan
     assert (type(issn) is str), "ISSN must be a string."
     new_issn = ''.join([i for i in issn if i.isnumeric() or i in {'X', 'x'}])
     new_issn = new_issn.upper()
     if len(new_issn) != 8:
-        _logger.info(f"Skipping illegal issn: {issn}, (coerced {new_issn}).")
+        _logger.info(f"Skipping illegal issn: {issn=}, (coerced={new_issn}).")
         return np.nan
     return new_issn
 
@@ -109,19 +114,20 @@ def _get_issn_combined_str(paper, online):
     Args:
         paper (str): single paper ISSN value.
         online (str): single online ISSN value (aka E-ISSN).
+
+    >>> _get_issn_combined_str('12345678', '87654321')
+    'P12345678_E87654321'
+    >>> _get_issn_combined_str(np.nan, '12345678')
+    'E12345678'
+    >>> _get_issn_combined_str('', np.nan)
+    ''
     """
     values = []
-    if paper and not_nan(paper):  # hack to handle nan
+    if paper and pd.notna(paper):  # hack to handle nan
         values.append(f'P{paper}')
-    if online and not_nan(online):
+    if online and pd.notna(online):
         values.append(f'E{online}')
     return '_'.join(values)
-
-
-def not_nan(val):
-    if val == val:
-        return True
-    return False
 
 
 def get_queries_from_yaml(yaml_input):
