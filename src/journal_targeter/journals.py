@@ -325,7 +325,7 @@ def _get_previous_env_path():
 
 def _app_requires_data_init():
     """Check if app is being started, which requires proactive data init."""
-    args = click.get_os_args()
+    args = sys.argv[1:]
     if len(args) and args[0] in {'run'} or _APP_LOCATION in args:
         return True
     return False
