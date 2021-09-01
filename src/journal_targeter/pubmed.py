@@ -44,6 +44,7 @@ from urllib import request as urllib_request
 import iso4
 import numpy as np
 import pandas as pd
+from flask import current_app
 
 from . import paths
 from .helpers import get_issn_safe, get_issn_comb, get_clean_lowercase, grouper, \
@@ -513,7 +514,8 @@ class TitleMatcher:
 def load_pubmed_journals(api_key: Union[str, None] = None):
     """Load table of PubMed journals, append extended metadata, drop inactive.
 
-    Reload source from NCBI if file doesn't exist.
+    Reload source from NCBI if file doesn't exist. Within application context,
+    update time will be stored in db source table.
 
     Args:
         api_key: NCBI Entrez API Key (optional). API_KEY in environment will be
@@ -522,8 +524,10 @@ def load_pubmed_journals(api_key: Union[str, None] = None):
     if not os.path.exists(paths.PM_MEDLINE_PATH):
         _download_pubmed_reference()
     pm = pd.DataFrame.from_records(_yield_records(paths.PM_MEDLINE_PATH))
-    api_key = api_key if api_key is not None else os.environ.get('API_KEY', None)
-    meta = _load_metadata_for_nlmids(pm.nlmid, drop_extra=True, api_key=api_key)
+    meta, meta_changed = _load_metadata_for_nlmids(pm.nlmid, drop_extra=True,
+                                                   api_key=api_key)
+    if meta_changed and current_app:
+        Source.updated_now('pubmed')
     pm.set_index('nlmid', inplace=True)
     pm = pm.join(meta[meta.is_active], how='inner')  # reduces pm to active only
     pm.rename(columns={'MedAbbr': 'abbr'}, inplace=True)
@@ -581,7 +585,6 @@ def _load_metadata_for_nlmids(nlmids: Iterable, drop_extra: bool = False,
 
     Args:
         nlmids: journal NLM IDs.
-        active_only: filter to current/active journals.
         drop_extra: remove non-matching nlmids in metadata file.
         api_key: NCBI Entrez API Key (optional)
     """
@@ -614,7 +617,7 @@ def _load_metadata_for_nlmids(nlmids: Iterable, drop_extra: bool = False,
     if meta_changed:
         _write_metadata_file(meta)
     meta = meta.reindex(nlmids)
-    return meta
+    return meta, meta_changed
 
 
 def _trim_metadata(meta_ext: pd.DataFrame) -> Union[pd.DataFrame, None]:
