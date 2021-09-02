@@ -289,6 +289,7 @@ class MasterTable:
         master['sr_id'] = load_sherpa_id_map()
         doaj = load_doaj_table()
         master = master.join(doaj, how='left')
+        master['is_open'] = master['doaj_compliant'] == 'Yes'
         self.df = master
         self.metric_list = metric_cols
         self.other_meta_list = other_cols

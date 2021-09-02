@@ -79,12 +79,10 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
     abbrv = jfm['uid'].map(MT.df['abbr'])
     jfm['abbr'] = abbrv.where(~abbrv.isnull(), jfm['journal_name'])
     jfm['abbr'] = jfm['abbr'].apply(lambda v: _get_short_str(v))
-
-    # Fill is_open and in_medline from pm (partial via Jane)
-    is_open = jfm['uid'].map(MT.df['is_open'])
-    is_open = is_open.where(jfm['is_oa'].isnull(), jfm['is_oa'])
-    jfm['is_open'] = is_open
+    # use MT is_open status, ignoring Jane 'is_oa'
+    jfm['is_open'] = jfm['uid'].map(MT.df['is_open'])
     jfm.drop(columns=['is_oa'], inplace=True)
+    # Fill in_medline from pm (partial via Jane)
     in_medline = jfm['uid'].map(MT.df['in_medline'])
     in_medline = in_medline.where(jfm['in_medline'].isnull(), jfm['in_medline'])
     jfm['in_medline'] = in_medline
