@@ -56,8 +56,8 @@ def flask_match(**kwargs):
 def cli(ctx: click.core.Context, verbose):
     if verbose:
         _logger.setLevel("DEBUG")
-    # ref init process for update-sources and gunicorn happens elsewhere
-    if ctx.invoked_subcommand not in {'setup', 'update-sources', 'gunicorn'}:
+    # ref init process for update-sources happens later
+    if ctx.invoked_subcommand not in {'setup', 'update-sources'}:
         init_data(init_refs=True)
     if ctx.invoked_subcommand in {'flask', 'gunicorn'}:
         init_data(init_demo=True)
