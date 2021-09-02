@@ -143,7 +143,9 @@ def config_edit():
     """Open configuration .env file in an editor."""
     if not paths.ENV_PATH.exists():
         paths.ENV_PATH.touch()
-    click.echo(f"Opening {paths.ENV_PATH}. Edit, then save when you're done.")
+        click.echo(f"Creating {paths.ENV_PATH}. Edit, then save when you're done.")
+    else:
+        click.echo(f"Opening {paths.ENV_PATH}. Edit, then save when you're done.")
     click.launch(str(paths.ENV_PATH))
 
 
