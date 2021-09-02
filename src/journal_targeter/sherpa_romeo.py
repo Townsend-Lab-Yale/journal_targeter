@@ -25,14 +25,14 @@ def download_sherpa_data(api_key: Optional[str], delete_old: bool = False) -> No
     - Takes approx 35min to download one at a time. Could be parallelized if
       number of journals is known in advance.
     """
-    api_key = os.environ.get('SHERPA_KEY') if not api_key else None
+    api_key = os.environ.get('ROMEO_KEY') if not api_key else None
     if not api_key:
-        raise MissingKeyException("Supply api_key argument or set SHERPA_KEY "
+        raise MissingKeyException("Supply api_key argument or set ROMEO_KEY "
                                   "environment variable")
     for offset in range(0, 100000, 100):  # assume <100k. 32185 on 2021-08-05
         if not offset % 1000:
             _logger.info(f"Download progress: current record index = {offset}.")
-        out_path = os.path.join(paths.SHERPA_TMP, f"items_{offset:05.0f}.pickle.gz")
+        out_path = os.path.join(paths.ROMEO_TMP, f"items_{offset:05.0f}.pickle.gz")
         if os.path.exists(out_path):
             continue
         r = requests.get('https://v2.sherpa.ac.uk/cgi/retrieve',
@@ -50,7 +50,7 @@ def download_sherpa_data(api_key: Optional[str], delete_old: bool = False) -> No
 
 
 def delete_old_sherpa_data():
-    old_paths = glob.glob(os.path.join(paths.SHERPA_TMP, 'items_*.pickle.gz'))
+    old_paths = glob.glob(os.path.join(paths.ROMEO_TMP, 'items_*.pickle.gz'))
     for path in old_paths:
         os.remove(path)
     _logger.info(f"Removed {len(old_paths)} old Sherpa Romeo files.")
