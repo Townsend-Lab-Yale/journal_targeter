@@ -2,6 +2,7 @@ import os
 import logging
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 
 from .paths import DOAJ_DIR
@@ -44,4 +45,14 @@ def load_doaj_table():
     d = pd.read_csv(os.path.join(DOAJ_DIR, 'doaj.tsv.gz'), sep='\t',
                     compression='gzip', lineterminator='\n', encoding='utf8')
     d = d.set_index('nlmid').drop(columns=['title'])
+    d['doaj_score'] = _get_doaj_score(d)
     return d
+
+
+def _get_doaj_score(df) -> pd.Series:
+    """Get score for DOAJ metrics (high = good) within df table."""
+    temp = df.copy()
+    temp['has_preservation'] = temp['preservation'].notnull()
+    temp_sorted = temp.sort_values(['doaj_seal', 'author_copyright', 'has_preservation', 'n_weeks_avg'], ascending=[False, False, False, True]).copy()
+    temp_sorted['doaj_score'] = np.arange(len(temp), 0, -1)
+    return temp_sorted['doaj_score']

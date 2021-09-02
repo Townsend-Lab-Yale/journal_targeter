@@ -60,7 +60,7 @@ def build_bokeh_sources(jf, af, refs_df):
         # Create column for hovertool values
         jfs[f'{metric}_str'] = jfs[metric].map(lambda v: 'unknown' if v < 0 else f"{v:0.1f}")
         _mark_dominant_journals(jfs, metric)
-    jfs['doaj_seal'] = jfs['doaj_seal'].map({'Yes': 1, 'No': 0, np.nan: -1})
+    jfs['doaj_score'] = jfs['doaj_score'].fillna(-1)
     jfs['apc'] = jfs['apc'].map({'Yes': 1, 'No': 0, np.nan: -1})
 
     # checkmark columns
@@ -307,7 +307,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
         'abstract': ('A', w_xs),
         'title': ('T', w_xs),
         'both': ('A&T', w_xs),
-        'doaj_seal': ('DOAJ', w_doaj),
+        'doaj_score': ('DOAJ', w_doaj),
     })
     col_param_dict.update(metric_dict)
     col_param_dict.update({
@@ -365,7 +365,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
 
     doaj_template = (
         f"""<%= doaj_compliant == 'Yes' ? '{_fragment_tick}' : '' %>"""
-        f"""<%= doaj_seal == 1 ? '{_fragment_seal}' : '' %>"""
+        f"""<%= doaj_seal == 'Yes' ? '{_fragment_seal}' : '' %>"""
         f"""<%= author_copyright == 'Yes' ? '{_fragment_auth_y}' : '' %>"""
         f"""<%= author_copyright == 'No' ? '{_fragment_auth_n}' : '' %>"""
         f"""<%= apc == 1 ? {_fragment_apc_1} : '' %>"""
@@ -376,7 +376,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
 
     format_dict = {
         'journal_name': bkm.widgets.HTMLTemplateFormatter(template=title_template),
-        'doaj_seal': bkm.widgets.HTMLTemplateFormatter(template=doaj_template),
+        'doaj_score': bkm.widgets.HTMLTemplateFormatter(template=doaj_template),
         'is_oa_str': bkm.widgets.StringFormatter(),
         'in_ml_str': bkm.widgets.StringFormatter(),
         'in_pmc_str': bkm.widgets.StringFormatter(),

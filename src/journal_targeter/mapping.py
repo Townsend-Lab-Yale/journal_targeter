@@ -95,7 +95,7 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
     jfm['url_doaj'] = jfm['uid'].map(MT.df['url_doaj'])
     use_doaj_cols = ['url_doaj', 'license', 'author_copyright', 'n_weeks_avg',
                      'apc', 'apc_val', 'preservation', 'doaj_compliant',
-                     'doaj_seal']
+                     'doaj_seal', 'doaj_score']
     for col in use_doaj_cols:
         jfm[col] = jfm['uid'].map(MT.df[col])
 
