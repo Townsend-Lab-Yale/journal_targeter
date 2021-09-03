@@ -73,9 +73,11 @@ def demo(demo_prefix=None):
                            )
 
 
-@main.route('/download/<category>', methods=['GET', 'POST'])
-def download(category: str):
+@main.route('/download/', methods=['GET'])
+@main.route('/download/<category>', methods=['GET'])
+def download(category=None):
     # check for populated session and matching data pickle
+    category = 'session' if not category else category
     if category not in {'demo', 'session'}:
         abort(404)
     if category == 'session':

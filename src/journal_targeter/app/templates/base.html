@@ -26,19 +26,34 @@
     ('main.demo', 'Demo'),
     ('main.search', 'Search'),
 ] -%}
+{% if 'title' in session %}
+    {% do nav_list.append(('main.results', 'Results')) %}
+{% endif %}
+{% if request.endpoint == 'main.demo' %}
+    {% set prefix = request.view_args.get('demo_prefix') %}
+    {% if prefix %}
+        {% set download_uri = url_for('main.download', category='demo', prefix=prefix) %}
+    {% else %}
+        {% set download_uri = url_for('main.download', category='demo') %}
+    {% endif %}
+{% else %}
+    {% set download_uri = url_for('main.download') %}
+{% endif %}
 
-    <nav class="navbar navbar-expand-lg navbar-light bg-white">
+<nav class="navbar navbar-expand-lg navbar-light bg-white">
   <a class="navbar-brand" href="{{ url_for('main.index') }}">Jot</a>
-  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarItems" aria-controls="navbarItems" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
   </button>
-  <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-    <div class="navbar-nav">
-      {% for endpoint, page_name in nav_list %}
-      <a class="nav-item nav-link{% if request.endpoint == endpoint %} active{% endif %}" href="{{ url_for(endpoint) }}">{{ page_name }}{% if request.endpoint == endpoint %} <span class="sr-only">(current)</span>{% endif %}</a>
-      {% endfor %}
-{#      <a class="nav-item nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Disabled</a>#}
-    </div>
+  <div class="collapse navbar-collapse" id="navbarItems">
+        <div class="navbar-nav mr-auto">
+          {% for endpoint, page_name in nav_list %}
+          <a class="nav-item nav-link me-2{% if request.endpoint == endpoint %} active{% endif %}" href="{{ url_for(endpoint) }}">{{ page_name }}{% if request.endpoint == endpoint %} <span class="sr-only">(current)</span>{% endif %}</a>
+          {% endfor %}
+        </div>
+    {% if request.endpoint in ['main.results', 'main.demo'] %}
+      <a class="btn btn-outline-primary" href="{{ download_uri }}">Download</a>
+    {% endif %}
   </div>
 </nav>
 
