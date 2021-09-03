@@ -1,5 +1,6 @@
-import os
-from flask import Blueprint, current_app
+from importlib import resources
+
+from flask import Blueprint
 
 main = Blueprint('main', __name__)
 
@@ -20,6 +21,6 @@ def _get_bokeh_version():
 
 
 def _get_static_text(filename):
-    fullpath = os.path.join(current_app.static_folder, filename)
-    with open(fullpath, 'r') as f:
-        return f.read()
+    with resources.path('journal_targeter.app.static', filename) as path:
+        with open(path, 'r') as infile:
+            return infile.read()

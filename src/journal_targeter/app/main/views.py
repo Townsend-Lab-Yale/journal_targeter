@@ -1,8 +1,11 @@
 import os
 import logging
 import tempfile
+from io import BytesIO
+from datetime import datetime
 
-from flask import render_template, redirect, url_for, flash, session, current_app
+from flask import render_template, redirect, url_for, flash, session, \
+    current_app, abort, request, send_file
 
 from . import main
 from .forms import UploadForm
@@ -68,6 +71,40 @@ def demo(demo_prefix=None):
                            bokeh_js=data['bokeh_js'],
                            bokeh_divs=data['bokeh_divs'],
                            )
+
+
+@main.route('/download/<category>', methods=['GET', 'POST'])
+def download(category: str):
+    # check for populated session and matching data pickle
+    if category not in {'demo', 'session'}:
+        abort(404)
+    if category == 'session':
+        if 'bokeh_js' not in session:
+            abort(404)  # session is not populated
+        data = session.copy()
+        time_str = datetime.utcnow().strftime('%Y-%m-%d_%H%M')
+        out_name = f"jot_results_{time_str}.html"
+        page_title = 'Results (local)'
+    else:  # Use demo data
+        prefix = request.args.get('prefix', current_app.config['DEMO_PREFIX'])
+        data = get_demo_data_with_prefix(prefix)
+        if not data:
+            abort(404)
+        out_name = f'demo_{prefix}.html'
+        page_title = f'{prefix} (local)'
+    html = render_template('index.html', title=page_title,
+                           standalone=True,
+                           query_title=data['title'],
+                           query_abstract=data['abstract'],
+                           query_ris=data['ris_name'],
+                           bokeh_js=data['bokeh_js'],
+                           bokeh_divs=data['bokeh_divs'],
+                           )
+    tmp_bytes = BytesIO()
+    tmp_bytes.write(html.encode('utf-8'))
+    tmp_bytes.seek(0)
+    return send_file(tmp_bytes, mimetype='html', as_attachment=True,
+                     attachment_filename=out_name, cache_timeout=-1)
 
 
 @main.route('/search', methods=['GET', 'POST'])

@@ -4,6 +4,7 @@ import pickle
 import shutil
 import logging
 import unicodedata
+from typing import Union, Dict
 
 from . import helpers
 from .paths import DEMO_DIR
@@ -14,7 +15,7 @@ from .mapping import run_queries
 _logger = logging.getLogger(__name__)
 
 
-def get_demo_data_with_prefix(file_prefix):
+def get_demo_data_with_prefix(file_prefix) -> Union[Dict, None]:
     """Load data dictionary for specified demo name prefix.
 
     Args:
@@ -25,6 +26,8 @@ def get_demo_data_with_prefix(file_prefix):
             bokeh_js, bokeh_divs.
     """
     pickle_path = os.path.join(DEMO_DIR, f'{file_prefix}.pickle')
+    if not os.path.exists(pickle_path):
+        return
     with open(pickle_path, 'rb') as infile:
         data = pickle.load(infile)
     return data
