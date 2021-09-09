@@ -28,9 +28,9 @@ used by entrez, which is in the journal page URL in the NLM catalog:
 import os
 import gzip
 import time
-import pickle
 import shlex
 import shutil
+import pickle
 import logging
 import requests
 import xmltodict

@@ -296,6 +296,25 @@ class MasterTable:
         _logger.info(f"Created master table. Metrics: %s; Other: %s.",
                      metric_cols, other_cols)
 
+    def get_uid_pretty(self, uid):
+        from .plot import _URL_NLM_BK, _URL_ROMEO
+        res = self.df.loc[uid]
+        if not len(res):
+            return ''
+        url_nlm = _URL_NLM_BK.replace('@uid', uid)
+        header = pd.Series(data=[uid, url_nlm], index=['nlmid', 'NLM URL'])
+        res = pd.concat([header, res]).fillna('')
+        url_sr = _URL_ROMEO.replace('@sr_id', res.sr_id) if res.sr_id else ''
+        res['sr_id'] = url_sr
+        res.rename({
+            'sr_id': 'Romeo URL',
+            'url_doaj': 'DOAJ URL',
+        }, inplace=True)
+        s = []
+        for name, val in res.iteritems():
+            s.append(f'{name: <18} {val}')
+        return '\n'.join(s)
+
     @staticmethod
     def _reduce_pubmed_table(pm):
         keep_cols = ['main_title', 'abbr', 'in_medline']

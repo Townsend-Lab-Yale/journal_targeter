@@ -16,6 +16,7 @@ from .reference import MT
 _URL_NLM_BK = "https://www.ncbi.nlm.nih.gov/nlmcatalog/?term=@uid[nlmid]"
 _URL_NLM_USCORE = "https://www.ncbi.nlm.nih.gov/nlmcatalog/?term=<%= uid %>[nlmid]"
 _URL_PUBMED = "https://pubmed.ncbi.nlm.nih.gov/@PMID/"
+_URL_ROMEO = "https://v2.sherpa.ac.uk/id/publication/@sr_id"
 _DEFAULT_IMPACT = "CiteScore"
 _DEFAULT_MATCH = 'sim_max'
 

@@ -12,6 +12,7 @@ from typing import Union
 
 import click
 import dotenv
+import pandas as pd
 from flask import render_template
 from flask.cli import FlaskGroup
 from flask_migrate import Migrate
@@ -260,6 +261,23 @@ def gunicorn(gunicorn_args):
     cmdline = [str(gunicorn_path), ] + list(gunicorn_args) + [_APP_LOCATION]
     click.echo(f"Invoking: {' '.join(cmdline)}")
     subprocess.call(cmdline)
+
+
+@cli.command()
+@click.argument('title', nargs=-1, type=str)
+@click.option('-i', '--issn_print', help="Print ISSN")
+@click.option('-e', '--issn_online', help="Online ISSN")
+def lookup_journal(title, issn_print, issn_online):
+    """Find journal metadata using title and optional ISSNs."""
+    from .reference import TM, MT
+    m = TM.lookup_uids_from_title_issn(titles=[title], issn_print=issn_print,
+                                       issn_online=issn_online)
+    uid = m.iloc[0]['uid']
+    if pd.isnull(uid):
+        click.echo(f"No match found.")
+        return
+    out_str = MT.get_uid_pretty(uid)
+    click.echo(out_str)
 
 
 def match_data(query_yaml=None, ris_path=None, out_basename=None):
