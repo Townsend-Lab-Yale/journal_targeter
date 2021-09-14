@@ -347,7 +347,8 @@ class TitleMatcher:
         elif not ambig_uids:
             _logger.info("No conflicting matches found when mapping to pubmed.")
         time_end = time.perf_counter()
-        _logger.info(f"Matching to Pubmed UIDs took {time_end - time_start:.1f} seconds.")
+        n_seconds = time_end - time_start
+        _logger.info(f"Matching to Pubmed UIDs took {n_seconds/ 60:.0f}m{n_seconds % 60:.0f}s.")
         n_unmatched = match.uid.isnull().sum()
         n_matched = len(match) - n_unmatched
         _logger.info(f"Successfully matched {n_matched} journals, leaving {n_unmatched} "
