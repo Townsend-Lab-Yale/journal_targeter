@@ -197,15 +197,21 @@ def _add_jids_names_to_refs(refs_df, jf):
     jid_from_name_dict = {name: jid for jid, name in jf.loc[jf['uid'] == tuple(), 'jane_name'].items()}
     jid_matches = refs_df['uid'].map(jid_from_uid_dict)
     jid_matches = jid_matches.where(~jid_matches.isnull(), refs_df['user_journal'].map(jid_from_name_dict))
+    jid_dict = jid_matches.dropna().to_dict()
 
-    # associate no-jid refs with 1) uid, 2) ref index
+    # For remaining no-jid refs, use uid if present
     needs_jid = refs_df.loc[jid_matches.isnull(), 'uid']  # ref_index: uid
     uids_without_jid = needs_jid.loc[lambda v: v != tuple()]
-    no_uid_or_jid = needs_jid.loc[lambda v: v == tuple()]
-    jid_dict = jid_matches.dropna().to_dict()
     jid_dict.update(uids_without_jid.apply(lambda v: f'u{v}').to_dict())
-    for ind in no_uid_or_jid.index:
-        jid_dict[ind] = f"r{ind}"
+
+    # For remaining no-jid refs, use row index of first instance of name
+    inds_no_uid_or_jid = needs_jid.loc[lambda v: v == tuple()].index
+    if len(inds_no_uid_or_jid):
+        extras = refs_df.loc[inds_no_uid_or_jid].user_journal
+        first_inds = extras.drop_duplicates()
+        extra_name_dict = {title: f"r{ind}" for ind, title in first_inds.items()}
+        jid_dict.update(extras.map(extra_name_dict).to_dict())
+
     refs_df['jid'] = refs_df.index.map(jid_dict)
 
     # Get single refs journal name per jid
