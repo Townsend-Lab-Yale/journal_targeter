@@ -187,7 +187,7 @@ class TableMatcher:
                key, val in self.issn_kw.items()})
         new_matches = res.set_index(self.source_unmatched.index)['uid'].dropna()
         new_matches.name = 'nlmid'
-        n_initial = len(self.id_map)
+        n_initial = len(self.id_map) if self.id_map is not None else 0
         n_new = len(new_matches)
         _logger.info(f"Adding {n_new} matches to {n_initial} record ID map.")
         self.id_map = pd.concat([self.id_map, new_matches]).drop_duplicates()
