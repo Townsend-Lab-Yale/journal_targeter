@@ -1,4 +1,6 @@
+from importlib import resources
 from collections import OrderedDict
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -9,6 +11,9 @@ from bokeh import models as bkm
 from bokeh import layouts as bkl
 from bokeh import plotting as bkp
 from bokeh import transform as bkt
+from bokeh.model import DataModel
+from bokeh.core.properties import String, Float, Bool
+from bokeh.models import CustomJS, Toggle
 
 from .colors import CATEG_HEX
 from .reference import MT
@@ -19,6 +24,27 @@ _URL_PUBMED = "https://pubmed.ncbi.nlm.nih.gov/@PMID/"
 _URL_ROMEO = "https://v2.sherpa.ac.uk/id/publication/@sr_id"
 _DEFAULT_IMPACT = "CiteScore"
 _DEFAULT_MATCH = 'sim_max'
+_DEFAULT_SHOW_ALL_METRICS = False
+
+
+class Params(DataModel):
+    """Stores key user-preference variables to link widgets and callbacks."""
+    metric = String(default=_DEFAULT_IMPACT, help="Preferred impact metric")
+    weight = Float(default=1, help="Impact weight for Prospect")
+    show_all_metrics = Bool(default=_DEFAULT_SHOW_ALL_METRICS, help="Include all metrics in Table.")
+
+
+class ModelTracker:
+    """Holds bokeh object handles used in shared callbacks."""
+    def __init__(self):
+        self.metric_axes = []
+        self.weight_slider = None
+        self.xrange_icats = None
+        self.fig_prospect = None
+        self.selects_metric = []
+        self.table_cols = None
+        self.all_metrics_toggle = None
+        self.metric_col_inds = None
 
 
 def get_bokeh_components(jf, af, refs_df):
@@ -40,12 +66,51 @@ def get_bokeh_components(jf, af, refs_df):
             return indices;
             """),
     }
-
     plots = OrderedDict()
-    plots['icats'] = plot_icats(source_j, source_a, source_c, filter_dict=filter_dict)
-    plots['table'] = plot_datatable(source_j)
-    plots['fit'] = plot_fit_scatter(source_j, filter_dict=filter_dict)
-    plots['prospect'] = plot_prospect_scatter(source_j, filter_dict=filter_dict)
+    mt = ModelTracker()
+    plots['icats'] = plot_icats(source_j, source_a, source_c,
+                                filter_dict=filter_dict, mt_obj=mt)
+    plots['table'] = plot_datatable(source_j, mt_obj=mt)
+    plots['fit'] = plot_fit_scatter(source_j, filter_dict=filter_dict,
+                                    mt_obj=mt)
+    plots['prospect'] = plot_prospect_scatter(source_j, filter_dict=filter_dict,
+                                              mt_obj=mt)
+
+    metric_main = bkm.widgets.Select(title="Preferred impact metric:",
+                                     value=_DEFAULT_IMPACT,
+                                     options=MT.metric_list,
+                                     width=150, width_policy='fixed',
+                                     margin=(5, 5, 5, 5))
+    plots['metric_main'] = metric_main
+    params = Params()
+    mt.weight_slider.js_link('value', params, 'weight')
+    for select in mt.selects_metric + [metric_main]:
+        select.js_link('value', params, 'metric')
+    mt.all_metrics_toggle.js_link('active', params, 'show_all_metrics')
+
+    metric_code = _get_metric_weight_change_js(metric_changed=True)
+    weight_code = _get_metric_weight_change_js(metric_changed=False)
+    params.js_on_change('metric', CustomJS(
+        args=dict(source=source_j,
+                  params=params,
+                  metric_axes=mt.metric_axes,
+                  xrange=mt.xrange_icats,
+                  p=mt.fig_prospect,
+                  table_cols=mt.table_cols,
+                  metric_col_inds=mt.metric_col_inds,
+                  ),
+        code=metric_code))
+    params.js_on_change('weight', CustomJS(
+        args=dict(source=source_j, params=params), code=weight_code))
+    toggle_code = _get_toggle_all_metrics_js()
+    params.js_on_change('show_all_metrics', CustomJS(
+        args=dict(
+            params=params,
+            metric_col_inds=mt.metric_col_inds,
+            table_cols=mt.table_cols,
+        ),
+        code=toggle_code))
+
     bokeh_js, bokeh_divs = bke.components(plots)
     return bokeh_js, bokeh_divs
 
@@ -99,7 +164,8 @@ def build_bokeh_sources(jf, af, refs_df):
     return source_j, source_a, source_c
 
 
-def plot_prospect_scatter(source_j, show_plot=False, filter_dict=None):
+def plot_prospect_scatter(source_j, show_plot=False, filter_dict=None,
+                          mt_obj: Union[None, ModelTracker] = None):
     TOOLS = "pan,wheel_zoom,box_select,reset,tap"
     plot_width, plot_height = 800, 400
     default_metric_label = _DEFAULT_IMPACT
@@ -119,65 +185,20 @@ def plot_prospect_scatter(source_j, show_plot=False, filter_dict=None):
     _add_scatter(fig=p1, source=source_j, filter_dict=filter_dict, **impact_kws)
 
     # WIDGETS
-    option_dict = {i: i for i in MT.metric_list}
-    select_kws = dict(width=150, width_policy='fixed', margin=(5, 5, 5, 45))
-    select1 = bkm.widgets.Select(title="Impact metric:",
-                                 value=default_metric_label,
-                                 options=list(option_dict),
-                                 **select_kws)
-
-    def get_prospect_js():
-        code = """
-        const option = select.value;
-        const option_dict = %s;
-        const new_data = Object.assign({}, source.data);
-        new_data.prospect = source.data['p_'.concat(option_dict[option])];
-        new_data.ax_impact = source.data[option_dict[option]];
-        new_data.label_metric = source.data['label_'.concat(option_dict[option])];
-        new_data.dominant = source.data['dominant_'.concat(option_dict[option])];
-        ax[0].axis_label = option;
-        source.data = new_data;
-        slider.value = 1;
-        p.x_range.reset();
-        p.y_range.reset();
-        """ % option_dict
-        return code
-
     slider = bkm.widgets.Slider(start=0.05, end=5, value=1, step=0.05, title="Weight")
 
-    select1.js_on_change('value', bkm.callbacks.CustomJS(args=dict(
-        select=select1, ax=p1.yaxis, source=source_j, slider=slider, p=p1),
-        code=get_prospect_js()))
-    slider.js_on_change('value', bkm.CustomJS(args=dict(source=source_j, select=select1), code="""
-        const new_data = Object.assign({}, source.data);
-        const col_names = %s;
-        const weight = cb_obj.value;
-        const impact_col = col_names[select.value];
-        const impact_vals = source.data[impact_col];
-        const cat_vals = source.data['CAT']
-        let prospects = [];
-        for (let ind = 0; ind < impact_vals.length; ind++){
-            let impact = impact_vals[ind];
-            if (impact >= 0){
-                let cat = cat_vals[ind];
-                let p = cat / (weight * impact + cat);
-                prospects.push(p);
-            }
-            else {
-                prospects.push(-1);
-            }
-        }
-        new_data.prospect = prospects;
-        source.data = new_data;
-    """ % option_dict))
+    grid = bkl.gridplot([[bkl.row(slider)], [p1]], merge_tools=False)
+    if mt_obj is not None:
+        mt_obj.metric_axes.append(p1.yaxis)
+        mt_obj.weight_slider = slider
+        mt_obj.fig_prospect = p1
 
-    grid = bkl.gridplot([[bkl.row(select1, slider)], [p1]], merge_tools=False)
     if show_plot:
         bk.io.show(grid)
     return grid
 
 
-def plot_fit_scatter(source_j, show_plot=False, filter_dict=None):
+def plot_fit_scatter(source_j, show_plot=False, filter_dict=None, mt_obj=None):
     """Scatter plot: CAT vs CiteScore."""
     TOOLS = "pan,wheel_zoom,box_select,reset"
     plot_width, plot_height = 400, 400
@@ -208,13 +229,12 @@ def plot_fit_scatter(source_j, show_plot=False, filter_dict=None):
     match_kws = dict(x='ax_match', y='ax_impact')
     _add_scatter(fig=p2, source=source_j, filter_dict=filter_dict, **match_kws)
 
+    if mt_obj is not None:
+        mt_obj.metric_axes.extend([p1.yaxis, p2.yaxis])
+
     # WIDGETS
     option_dict = {label_dict[i]: i for i in label_dict}
     select_kws = dict(width=150, width_policy='fixed', margin=(5, 5, 5, 45))
-    select1 = bkm.widgets.Select(title="Impact metric:",
-                                 value=label_dict[_DEFAULT_IMPACT],
-                                 options=[label_dict[i] for i in MT.metric_list],
-                                 **select_kws)
     select2 = bkm.widgets.Select(title="Similarity metric:",
                                  value=label_dict[_DEFAULT_MATCH],
                                  options=[label_dict[i] for i in match_cols],
@@ -243,15 +263,12 @@ def plot_fit_scatter(source_j, show_plot=False, filter_dict=None):
             """
         return code_data + code_axis
 
-    select1.js_on_change('value', bkm.callbacks.CustomJS(
-        args=dict(select=select1, axy1=p1.yaxis, axy2=p2.yaxis, source=source_j),
-        code=get_select_js('ax_impact', impact_changed=True)))
     select2.js_on_change('value', bkm.callbacks.CustomJS(
         args=dict(select=select2, axis=p2.xaxis, source=source_j),
         code=get_select_js('ax_match', impact_changed=False)))
 
     # column = bkl.column([select1, p1])
-    grid = bkl.gridplot([[select1, select2], [p1, p2]], toolbar_location='left',
+    grid = bkl.gridplot([[select2], [p1, p2]], toolbar_location='left',
                         toolbar_options={'logo': None})
     if show_plot:
         bk.io.show(grid)
@@ -284,7 +301,7 @@ def _add_scatter(fig=None, source=None, filter_dict=None, **kwargs):
     fig.legend.click_policy = 'hide'
 
 
-def plot_datatable(source_j, show_plot=False, table_kws=None):
+def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None):
     if not table_kws:
         table_kws = {}
     col_kws = {
@@ -396,10 +413,17 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
 
     # LINK_COLS = []
     columns = []  # FOR DataTable
-    for col in col_param_dict:
+    metric_col_inds = {}
+    for ind, col in enumerate(col_param_dict):
         columns.append(bkm.widgets.TableColumn(
             field=col, title=col_param_dict[col][0],
             **table_cols[col]))
+        if col in MT.metric_list:
+            metric_col_inds[col] = ind
+    # Hide metric columns if necessary
+    if not _DEFAULT_SHOW_ALL_METRICS:
+        for metric, col_ind in metric_col_inds.items():
+            columns[col_ind].visible = metric == _DEFAULT_IMPACT
     n_journals = len(source_j.data['index'])
     row_height = 25  # pixels
     table_height = (n_journals + 1) * row_height  # add 1 for header
@@ -408,9 +432,16 @@ def plot_datatable(source_j, show_plot=False, table_kws=None):
                                        row_height=row_height,
                                        index_position=None, fit_columns=False,
                                        **table_kws)
+    toggle = Toggle(label="Show all metrics", active=False)
+    if mt_obj is not None:
+        mt_obj.table_cols = columns
+        mt_obj.all_metrics_toggle = toggle
+        mt_obj.metric_col_inds = metric_col_inds
+    grid = bkl.gridplot([[data_table], [toggle]])
+
     if show_plot:
-        bkio.show(data_table)
-    return data_table
+        bkio.show(grid)
+    return grid
 
 
 def _get_formatter_mark_blank_round_dp(dp=1):
@@ -420,7 +451,8 @@ def _get_formatter_mark_blank_round_dp(dp=1):
                  f"""<%= value < 0 ? '' : Math.round(value * {scalar}) / {scalar} %></span>""")
 
 
-def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None):
+def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None,
+               mt_obj=None):
     """Create interactive ICATS scatter plot.
 
     Returns:
@@ -476,6 +508,10 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None):
                      x_range=(impact_max_initial, 0), y_range=p.y_range,
                      plot_width=width_l, plot_height=plot_height,
                      x_axis_label=_DEFAULT_IMPACT, x_axis_location="above")
+    if mt_obj is not None:
+        mt_obj.metric_axes.append(p_l.xaxis)
+        mt_obj.xrange_icats = p_l.x_range
+
     r_ibg = p_l.hbar(y='jid', height=1, left=0, right='impact_max',
                      source=source_j, color='ax_impact_bg')
     view_known = bkm.CDSView(source=source_j, filters=[filter_dict['known_metric']])
@@ -489,41 +525,6 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None):
     metric_options = {i: i for i in MT.metric_list}
     default_metric_label = _DEFAULT_IMPACT
     select_kws = dict(width=100, width_policy='fixed', margin=(5, 5, 5, 15))
-    select1 = bkm.widgets.Select(title="Impact metric:",
-                                 value=default_metric_label,
-                                 options=list(metric_options),
-                                 **select_kws)
-    impact_js = """const option = select.value;
-            const option_dict = %s;
-            const impact_vals = source.data[option_dict[option]];
-            var max_impact = 0;
-            for (var i = 0; i < impact_vals.length; i++) {
-                if (impact_vals[i] > max_impact){
-                    max_impact = impact_vals[i];
-                }
-            }
-            let na_vals = [];
-            let max_vals = [];
-            for (var i = 0; i < impact_vals.length; i++) {
-                if (impact_vals[i] < 0){
-                    na_vals.push('whitesmoke');
-                }
-                else {
-                    na_vals.push('white');
-                }
-                max_vals.push(max_impact);
-            }
-            const new_data = Object.assign({}, source.data);
-            new_data.ax_impact = impact_vals;
-            new_data.ax_impact_bg = na_vals;
-            new_data.impact_max = max_vals;
-            ax[0].axis_label = option;
-            xrange.start = max_impact;
-            source.data = new_data;
-            """ % metric_options
-    select1.js_on_change('value', bkm.callbacks.CustomJS(
-        args=dict(select=select1, xrange=p_l.x_range, ax=p_l.xaxis, source=source_j),
-        code=impact_js))
     # SORT SELECT
     select2 = bkm.widgets.Select(title='Sort by:', value='CAT', width=120,
                                  width_policy='fixed',
@@ -544,7 +545,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None):
                                upper="sim_max", lower="sim_min",
                                line_alpha=1, line_color='gray', line_width=0.5))
     factor_cm = bkt.factor_cmap('categ', palette=a_colors, factors=stack_factors)
-    r_as = p_r.circle(y='jid',  # y=bkt.jitter('jid', width=0.5, range=p_r.y_range),
+    r_as = p_r.circle(y=bkt.jitter('jid', width=0.5, range=p_r.y_range),
                       x='sim_max', source=source_a,  # x_range_name='ax_sim',
                       size=10, alpha=0.5, color=factor_cm,)
     taptool = p_r.select(type=bkm.TapTool)
@@ -587,13 +588,31 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None):
     # p_l.axis[1].axis_line_color = '#000000'
     p_l.yaxis.visible = False
     p.yaxis.visible = False
-    select_row = bkl.row(select1, select2)
+    select_row = bkl.row(select2)
     grid = bkl.gridplot([[select_row], [p_l, p, p_r]], toolbar_location=None)
 
     if show_plot:
         bkp.show(grid)
     # js, div = bke.components(grid)
     return grid
+
+
+def _get_metric_weight_change_js(metric_changed: bool):
+    with resources.path('journal_targeter.callbacks', 'cb_metric_weight.js') as path:
+        with open(path) as infile:
+            base_js = infile.read()
+    if metric_changed:
+        preamble = "const changed_metric = true;"
+    else:
+        preamble = "const changed_metric = false;"
+    return '\n'.join([preamble, base_js])
+
+
+def _get_toggle_all_metrics_js():
+    with resources.path('journal_targeter.callbacks', 'cb_toggle_all_metrics.js') as path:
+        with open(path) as infile:
+            base_js = infile.read()
+    return base_js
 
 
 def _mark_dominant_journals(df, metric):
