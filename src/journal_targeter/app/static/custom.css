@@ -63,3 +63,19 @@
 .icon-empty {
     color: lightgray;
 }
+
+#sidebar-cards .card-header {
+    font-size: 1rem;
+    padding: 0rem;
+}
+
+#sidebar-cards .card-header .btn {
+    padding-left: 1rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-width: 0px;
+}
+
+#sidebar-cards .card-body {
+    padding: 1rem;
+}

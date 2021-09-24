@@ -38,9 +38,14 @@
             </div>
 
         </div>
-        <div class="col-lg-3 order-1 order-xl-1 pr-0">
+        <div id="sidebar-cards" class="col-lg-3 order-1 order-xl-1 pr-0">
 
           <div class="card">
+              <div class="card-header">
+                  <button id="prefs-button" class="btn" disabled>
+                    Preferences
+                  </button>
+              </div>
               <div class="card-body" id="prefs-div">
                     {{ bokeh_divs['prefs_widgets']|safe }}
               </div>
@@ -49,29 +54,11 @@
           <div id="accordion">
 
             <div class="card border-light">
-              <div class="card-header" id="tips-header">
-                <h5 class="mb-0">
-                  <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#about-collapse"
-                          aria-expanded="false" aria-controls="tips-collapse">
-                    About
-                  </button>
-                </h5>
-              </div>
-              <div id="about-collapse" class="collapse" aria-labelledby="tips-header" data-parent="#accordion">
-                <div class="card-body">
-                    {% include "_info_jane.html" %}
-                </div>
-              </div>
-            </div>
-
-            <div class="card border-light">
               <div class="card-header" id="inputs-header">
-                <h5 class="mb-0">
                   <button class="btn btn-link" data-toggle="collapse" data-target="#inputs-collapse"
                           aria-expanded="true" aria-controls="inputs-collapse">
                     Inputs
                   </button>
-                </h5>
               </div>
               <div id="inputs-collapse" class="collapse show" aria-labelledby="inputs-header" data-parent="#accordion">
                   <div class="card-body">
@@ -97,20 +84,32 @@
                             <button form='jane-abstract' class="btn btn-outline-secondary" type="submit"><i class="fas fa-external-link-alt mr-1"></i>Abstract</button>
                         </div>
                       </div>
-                    
+
                     </div>
                   </div>
                 </div>
               </div>
 
+            <div class="card border-light">
+              <div class="card-header" id="tips-header">
+                  <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#about-collapse"
+                          aria-expanded="false" aria-controls="tips-collapse">
+                    About
+                  </button>
+              </div>
+              <div id="about-collapse" class="collapse" aria-labelledby="tips-header" data-parent="#accordion">
+                <div class="card-body">
+                    {% include "_info_jane.html" %}
+                </div>
+              </div>
+            </div>
+
               <div class="card border-light">
                   <div class="card-header" id="tips-header">
-                    <h5 class="mb-0">
                       <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#tips-collapse"
                               aria-expanded="false" aria-controls="tips-collapse">
                         Exploring the results
                       </button>
-                    </h5>
                   </div>
                   <div id="tips-collapse" class="collapse" aria-labelledby="tips-header" data-parent="#accordion">
                     <div class="card-body">
