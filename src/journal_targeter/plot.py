@@ -265,7 +265,7 @@ def plot_fit_scatter(source_j, show_plot=False, filter_dict=None, mt_obj=None):
         args=dict(select=select2, axis=p2.xaxis, source=source_j),
         code=get_select_js('ax_match', impact_changed=False)))
 
-    grid = bkl.gridplot([[None, select2], [p1, p2]], toolbar_location='left',
+    grid = bkl.gridplot([[p1, p2], [None, select2]], toolbar_location='left',
                         toolbar_options={'logo': None})
     if show_plot:
         bk.io.show(grid)
@@ -587,7 +587,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None,
     p_l.yaxis.visible = False
     p.yaxis.visible = False
     select_row = bkl.row(select2)
-    grid = bkl.gridplot([[select_row], [p_l, p, p_r]], toolbar_location=None)
+    grid = bkl.gridplot([[p_l, p, p_r, select_row]], toolbar_location=None)
 
     if show_plot:
         bkp.show(grid)
