@@ -41,7 +41,6 @@ class ModelTracker:
         self.weight_slider = None
         self.xrange_icats = None
         self.fig_prospect = None
-        self.selects_metric = []
         self.table_cols = None
         self.all_metrics_toggle = None
         self.metric_col_inds = None
@@ -75,23 +74,29 @@ def get_bokeh_components(jf, af, refs_df):
                                     mt_obj=mt)
     plots['prospect'] = plot_prospect_scatter(source_j, filter_dict=filter_dict,
                                               mt_obj=mt)
-
-    metric_main = bkm.widgets.Select(title="Preferred impact metric:",
-                                     value=_DEFAULT_IMPACT,
-                                     options=MT.metric_list,
-                                     width=150, width_policy='fixed',
-                                     margin=(5, 5, 5, 5))
-    plots['metric_main'] = metric_main
     params = Params()
-    mt.weight_slider.js_link('value', params, 'weight')
-    for select in mt.selects_metric + [metric_main]:
-        select.js_link('value', params, 'metric')
+    # Create preference widgets, link to params
+    metric_select = bkm.widgets.Select(title="Preferred impact metric:",
+                                       value=_DEFAULT_IMPACT,
+                                       options=MT.metric_list,
+                                       width=200, width_policy='fixed',
+                                       margin=(5, 5, 5, 5))
+    metric_select.js_link('value', params, 'metric')
+    slider = bkm.widgets.Slider(start=0.05, end=5, value=1, step=0.05,
+                                title="Weight", width=200)
+    slider.js_link('value', params, 'weight')
+    plots['prefs_widgets'] = bkl.column(metric_select, slider)
     mt.all_metrics_toggle.js_link('active', params, 'show_all_metrics')
+    # Set up shared callbacks
+    _create_callbacks_for_params(params=params, source=source_j, mt=mt)
+    bokeh_js, bokeh_divs = bke.components(plots)
+    return bokeh_js, bokeh_divs
 
+
+def _create_callbacks_for_params(params=None, source=None, mt=None):
     metric_code = _get_metric_weight_change_js(metric_changed=True)
-    weight_code = _get_metric_weight_change_js(metric_changed=False)
     params.js_on_change('metric', CustomJS(
-        args=dict(source=source_j,
+        args=dict(source=source,
                   params=params,
                   metric_axes=mt.metric_axes,
                   xrange=mt.xrange_icats,
@@ -100,8 +105,9 @@ def get_bokeh_components(jf, af, refs_df):
                   metric_col_inds=mt.metric_col_inds,
                   ),
         code=metric_code))
+    weight_code = _get_metric_weight_change_js(metric_changed=False)
     params.js_on_change('weight', CustomJS(
-        args=dict(source=source_j, params=params), code=weight_code))
+        args=dict(source=source, params=params), code=weight_code))
     toggle_code = _get_toggle_all_metrics_js()
     params.js_on_change('show_all_metrics', CustomJS(
         args=dict(
@@ -110,9 +116,6 @@ def get_bokeh_components(jf, af, refs_df):
             table_cols=mt.table_cols,
         ),
         code=toggle_code))
-
-    bokeh_js, bokeh_divs = bke.components(plots)
-    return bokeh_js, bokeh_divs
 
 
 def build_bokeh_sources(jf, af, refs_df):
@@ -167,7 +170,7 @@ def build_bokeh_sources(jf, af, refs_df):
 def plot_prospect_scatter(source_j, show_plot=False, filter_dict=None,
                           mt_obj: Union[None, ModelTracker] = None):
     TOOLS = "pan,wheel_zoom,box_select,reset,tap"
-    plot_width, plot_height = 800, 400
+    plot_width, plot_height = 800, 450
     default_metric_label = _DEFAULT_IMPACT
 
     # IMPACT VS PROSPECT FIGURE (p1)
@@ -184,18 +187,13 @@ def plot_prospect_scatter(source_j, show_plot=False, filter_dict=None,
     impact_kws = dict(y='ax_impact', x='prospect')
     _add_scatter(fig=p1, source=source_j, filter_dict=filter_dict, **impact_kws)
 
-    # WIDGETS
-    slider = bkm.widgets.Slider(start=0.05, end=5, value=1, step=0.05, title="Weight")
-
-    grid = bkl.gridplot([[bkl.row(slider)], [p1]], merge_tools=False)
     if mt_obj is not None:
         mt_obj.metric_axes.append(p1.yaxis)
-        mt_obj.weight_slider = slider
         mt_obj.fig_prospect = p1
 
     if show_plot:
-        bk.io.show(grid)
-    return grid
+        bk.io.show(p1)
+    return p1
 
 
 def plot_fit_scatter(source_j, show_plot=False, filter_dict=None, mt_obj=None):
@@ -267,8 +265,7 @@ def plot_fit_scatter(source_j, show_plot=False, filter_dict=None, mt_obj=None):
         args=dict(select=select2, axis=p2.xaxis, source=source_j),
         code=get_select_js('ax_match', impact_changed=False)))
 
-    # column = bkl.column([select1, p1])
-    grid = bkl.gridplot([[select2], [p1, p2]], toolbar_location='left',
+    grid = bkl.gridplot([[None, select2], [p1, p2]], toolbar_location='left',
                         toolbar_options={'logo': None})
     if show_plot:
         bk.io.show(grid)
@@ -432,12 +429,13 @@ def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None):
                                        row_height=row_height,
                                        index_position=None, fit_columns=False,
                                        **table_kws)
-    toggle = Toggle(label="Show all metrics", active=False)
+    toggle = Toggle(label="Show all metrics", button_type='default', width=150,
+                    active=False)
     if mt_obj is not None:
         mt_obj.table_cols = columns
         mt_obj.all_metrics_toggle = toggle
         mt_obj.metric_col_inds = metric_col_inds
-    grid = bkl.gridplot([[data_table], [toggle]])
+    grid = bkl.gridplot([[toggle], [data_table]], toolbar_location=None)
 
     if show_plot:
         bkio.show(grid)
