@@ -37,7 +37,7 @@ def refresh_data(app: Flask = None, rebuild_scopus=False):
     TM.refresh_matching_data(rebuild_scopus=rebuild_scopus)
     with app.app_context():
         demo_prefix = app.config['DEMO_PREFIX']
-    update_demo_plot(demo_prefix, use_pickle=False)
+    update_demo_plot(demo_prefix, use_jane_tables=False)
 
 
 def copy_initial_data(app):

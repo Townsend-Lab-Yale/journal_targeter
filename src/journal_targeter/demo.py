@@ -33,22 +33,22 @@ def get_demo_data_with_prefix(file_prefix) -> Union[Dict, None]:
     return data
 
 
-def update_demo_plot(file_prefix, use_pickle=True):
+def update_demo_plot(file_prefix, use_jane_tables=True):
     """Update bokeh plot js and html for specified demo file.
 
     Plot components can become out of date. This function updates them.
+    Does not alter refs_df table of citations matched to journals.
     """
     pickle_path = os.path.join(DEMO_DIR, f'{file_prefix}.pickle')
     with open(pickle_path, 'rb') as infile:
         data = pickle.load(infile)
-    if use_pickle:
+    refs_df = data['refs_df']
+    if use_jane_tables:
         jf = data['jf']
         af = data['af']
-        refs_df = data['refs_df']
     else:
-        jf, af, refs_df = run_queries(data['title'],
-                                      query_abstract=data['abstract'],
-                                      refs_df=data['refs_df'])
+        jf, af, _ = run_queries(data['title'], query_abstract=data['abstract'],
+                                refs_df=refs_df)
         data.update({'jf': jf,
                      'af': af})
     js, divs = get_bokeh_components(jf, af, refs_df)
