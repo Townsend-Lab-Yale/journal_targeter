@@ -23,6 +23,7 @@ _URL_NLM_USCORE = "https://www.ncbi.nlm.nih.gov/nlmcatalog/?term=<%= uid %>[nlmi
 _URL_PUBMED = "https://pubmed.ncbi.nlm.nih.gov/@PMID/"
 _URL_ROMEO = "https://v2.sherpa.ac.uk/id/publication/@sr_id"
 _DEFAULT_IMPACT = "CiteScore"
+_DEFAULT_WEIGHT = 1
 _DEFAULT_MATCH = 'sim_max'
 _DEFAULT_SHOW_ALL_METRICS = False
 
@@ -30,7 +31,7 @@ _DEFAULT_SHOW_ALL_METRICS = False
 class Params(DataModel):
     """Stores key user-preference variables to link widgets and callbacks."""
     metric = String(default=_DEFAULT_IMPACT, help="Preferred impact metric")
-    weight = Float(default=1, help="Impact weight for Prospect")
+    weight = Float(default=_DEFAULT_WEIGHT, help="Impact weight for Prospect")
     show_all_metrics = Bool(default=_DEFAULT_SHOW_ALL_METRICS, help="Include all metrics in Table.")
 
 
@@ -46,7 +47,8 @@ class ModelTracker:
         self.metric_col_inds = None
 
 
-def get_bokeh_components(jf, af, refs_df):
+def get_bokeh_components(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
+                         pref_weight=_DEFAULT_WEIGHT, store_prefs=False):
     """Returns bokeh_js, bokeh_divs."""
     source_j, source_a, source_c = build_bokeh_sources(jf, af, refs_df)
 
@@ -68,29 +70,49 @@ def get_bokeh_components(jf, af, refs_df):
     plots = OrderedDict()
     mt = ModelTracker()
     plots['icats'] = plot_icats(source_j, source_a, source_c,
-                                filter_dict=filter_dict, mt_obj=mt)
-    plots['table'] = plot_datatable(source_j, mt_obj=mt)
+                                filter_dict=filter_dict, mt_obj=mt,
+                                pref_metric=pref_metric)
+    plots['table'] = plot_datatable(source_j, mt_obj=mt, pref_metric=pref_metric)
     plots['fit'] = plot_fit_scatter(source_j, filter_dict=filter_dict,
-                                    mt_obj=mt)
+                                    mt_obj=mt, pref_metric=pref_metric)
     plots['prospect'] = plot_prospect_scatter(source_j, filter_dict=filter_dict,
-                                              mt_obj=mt)
+                                              mt_obj=mt, pref_metric=pref_metric)
     params = Params()
+    params.metric, params.weight = pref_metric, pref_weight
     # Create preference widgets, link to params
     metric_select = bkm.widgets.Select(title="Preferred impact metric:",
-                                       value=_DEFAULT_IMPACT,
+                                       value=pref_metric,
                                        options=MT.metric_list,
                                        width=200, width_policy='fixed',
                                        margin=(5, 5, 5, 5))
     metric_select.js_link('value', params, 'metric')
-    slider = bkm.widgets.Slider(start=0.05, end=5, value=1, step=0.05,
+    if store_prefs:
+        metric_select.js_on_change('value', _get_pref_ajax_cb('metric'))
+
+    slider = bkm.widgets.Slider(start=0.05, end=5, value=pref_weight, step=0.05,
                                 title="Weight", width=200)
     slider.js_link('value', params, 'weight')
+    if store_prefs:
+        slider.js_on_change('value_throttled', _get_pref_ajax_cb('weight'))
+
     plots['prefs_widgets'] = bkl.column(metric_select, slider)
     mt.all_metrics_toggle.js_link('active', params, 'show_all_metrics')
     # Set up shared callbacks
     _create_callbacks_for_params(params=params, source=source_j, mt=mt)
     bokeh_js, bokeh_divs = bke.components(plots)
     return bokeh_js, bokeh_divs
+
+
+def _get_pref_ajax_cb(param_name):
+    code = """
+            const param_name = '%s';
+            let data = {};
+            data[param_name] = cb_obj.value;
+            ($.post('/prefer', data)
+              .done(response => console.log(response['msg']))
+              .fail(() => console.log(param_name + " preference setting failed."))
+            )""" % param_name
+    return CustomJS(code=code)
 
 
 def _create_callbacks_for_params(params=None, source=None, mt=None):
@@ -118,17 +140,16 @@ def _create_callbacks_for_params(params=None, source=None, mt=None):
         code=toggle_code))
 
 
-def build_bokeh_sources(jf, af, refs_df):
+def build_bokeh_sources(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
+                        pref_weight=_DEFAULT_WEIGHT):
     """Return source_j, source_a, source_c."""
-    # JOURNALS
     jfs = jf.copy()
     for metric in MT.metric_list:
         # Replace nans with -1 as workaround for bokeh nan sorting
         jfs[metric] = jfs[metric].fillna(-1)
-        jfs[f'p_{metric}'] = jfs[f'p_{metric}'].fillna(-1)
         # Create column for hovertool values
         jfs[f'{metric}_str'] = jfs[metric].map(lambda v: 'unknown' if v < 0 else f"{v:0.1f}")
-        _mark_dominant_journals(jfs, metric)
+        _mark_dominant_journals(jfs, metric, weight=pref_weight)
     jfs['doaj_score'] = jfs['doaj_score'].fillna(-1)
     jfs['apc'] = jfs['apc'].map({'Yes': 1, 'No': 0, np.nan: -1})
 
@@ -143,13 +164,13 @@ def build_bokeh_sources(jf, af, refs_df):
     jfs['loc_cited'] = 'cited'
     jfs['loc_abstract'] = 'abstract'
     jfs['loc_title'] = 'title'
-    jfs['ax_impact'] = jfs[_DEFAULT_IMPACT]  # redundant column for metric toggling
-    jfs['dominant'] = jfs[f'dominant_{_DEFAULT_IMPACT}']
-    jfs['ax_impact_bg'] = (jfs[_DEFAULT_IMPACT] < 1).map({True: 'whitesmoke', False: 'white'})
-    jfs['impact_max'] = jfs[_DEFAULT_IMPACT].max()
+    jfs['ax_impact'] = jfs[pref_metric]  # redundant column for metric toggling
+    jfs['dominant'] = jfs[f'dominant_{pref_metric}']
+    jfs['ax_impact_bg'] = (jfs['ax_impact'] < 1).map({True: 'whitesmoke', False: 'white'})
+    jfs['impact_max'] = jfs['ax_impact'].max()
     jfs['ax_match'] = jfs[_DEFAULT_MATCH]  # redundant column for suitability toggling
-    jfs['prospect'] = jfs[f"p_{_DEFAULT_IMPACT}"]
-    jfs['label_metric'] = jfs[f"label_{_DEFAULT_IMPACT}"]
+    jfs['prospect'] = jfs['CAT'] / (jfs['CAT'] + pref_weight * jfs['ax_impact'])
+    jfs['label_metric'] = jfs[f"label_{pref_metric}"]
 
     source_j = bkm.ColumnDataSource(jfs)
 
@@ -168,10 +189,11 @@ def build_bokeh_sources(jf, af, refs_df):
 
 
 def plot_prospect_scatter(source_j, show_plot=False, filter_dict=None,
-                          mt_obj: Union[None, ModelTracker] = None):
+                          mt_obj: Union[None, ModelTracker] = None,
+                          pref_metric=_DEFAULT_IMPACT):
     TOOLS = "pan,wheel_zoom,box_select,reset,tap"
     plot_width, plot_height = 800, 450
-    default_metric_label = _DEFAULT_IMPACT
+    default_metric_label = pref_metric
 
     # IMPACT VS PROSPECT FIGURE (p1)
     p1 = bkp.figure(tools=TOOLS, plot_width=plot_width, plot_height=plot_height,
@@ -196,7 +218,8 @@ def plot_prospect_scatter(source_j, show_plot=False, filter_dict=None,
     return p1
 
 
-def plot_fit_scatter(source_j, show_plot=False, filter_dict=None, mt_obj=None):
+def plot_fit_scatter(source_j, show_plot=False, filter_dict=None, mt_obj=None,
+                     pref_metric=_DEFAULT_IMPACT):
     """Scatter plot: CAT vs CiteScore."""
     TOOLS = "pan,wheel_zoom,box_select,reset"
     plot_width, plot_height = 400, 400
@@ -213,7 +236,7 @@ def plot_fit_scatter(source_j, show_plot=False, filter_dict=None, mt_obj=None):
     cat_jitter = bkt.jitter('CAT', 0.3, range=range_cat)
 
     fig_kws = dict(tools=TOOLS, plot_width=plot_width, plot_height=plot_height,
-                   y_axis_label=label_dict[_DEFAULT_IMPACT])
+                   y_axis_label=label_dict[pref_metric])
 
     # CAT VS IMPACT FIGURE (p1)
     p1 = bkp.figure(x_range=range_cat, x_axis_label=label_dict['CAT'],
@@ -298,7 +321,8 @@ def _add_scatter(fig=None, source=None, filter_dict=None, **kwargs):
     fig.legend.click_policy = 'hide'
 
 
-def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None):
+def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None,
+                   pref_metric=_DEFAULT_IMPACT):
     if not table_kws:
         table_kws = {}
     col_kws = {
@@ -420,7 +444,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None):
     # Hide metric columns if necessary
     if not _DEFAULT_SHOW_ALL_METRICS:
         for metric, col_ind in metric_col_inds.items():
-            columns[col_ind].visible = metric == _DEFAULT_IMPACT
+            columns[col_ind].visible = metric == pref_metric
     n_journals = len(source_j.data['index'])
     row_height = 25  # pixels
     table_height = (n_journals + 1) * row_height  # add 1 for header
@@ -450,7 +474,7 @@ def _get_formatter_mark_blank_round_dp(dp=1):
 
 
 def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None,
-               mt_obj=None):
+               mt_obj=None, pref_metric=_DEFAULT_IMPACT):
     """Create interactive ICATS scatter plot.
 
     Returns:
@@ -505,7 +529,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None,
     p_l = bkp.figure(tools=TOOLS,
                      x_range=(impact_max_initial, 0), y_range=p.y_range,
                      plot_width=width_l, plot_height=plot_height,
-                     x_axis_label=_DEFAULT_IMPACT, x_axis_location="above")
+                     x_axis_label=pref_metric, x_axis_location="above")
     if mt_obj is not None:
         mt_obj.metric_axes.append(p_l.xaxis)
         mt_obj.xrange_icats = p_l.x_range
@@ -518,12 +542,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None,
     taptool_impact = p_l.select(type=bkm.TapTool)
     taptool_impact.callback = bkm.OpenURL(url=_URL_NLM_BK)
 
-    # WIDGETS
-    # IMPACT SELECT
-    metric_options = {i: i for i in MT.metric_list}
-    default_metric_label = _DEFAULT_IMPACT
-    select_kws = dict(width=100, width_policy='fixed', margin=(5, 5, 5, 15))
-    # SORT SELECT
+    # SORT SELECT WIDGET
     select2 = bkm.widgets.Select(title='Sort by:', value='CAT', width=120,
                                  width_policy='fixed',
                                  options=list(factor_dict))
@@ -613,19 +632,20 @@ def _get_toggle_all_metrics_js():
     return base_js
 
 
-def _mark_dominant_journals(df, metric):
+def _mark_dominant_journals(df, metric, weight=_DEFAULT_WEIGHT):
     """Add 'dominant_<metric>' column to journals table."""
 
-    prob = f"p_{metric}"
+    prospects = df['CAT'] / (df['CAT'] + weight * df[metric])  # type: pd.Series
 
     def row_is_dominated(temp):
+        temp_p = prospects[temp.name]
         if pd.isnull(temp[metric]):
             return True
         for ind, r in df.iterrows():
             "Does this row dominate current value."
             if pd.isnull(r[metric]):
                 continue
-            if r[metric] > temp[metric] and r[prob] > temp[prob]:
+            if r[metric] > temp[metric] and prospects[ind] > temp_p:
                 return True
             """Only keep one duplicate m, p."""
         return False

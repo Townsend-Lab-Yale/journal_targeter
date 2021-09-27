@@ -12,43 +12,35 @@ from .forms import UploadForm
 
 from ...mapping import run_queries
 from ...plot import get_bokeh_components
-from ...demo import get_demo_data_with_prefix
+from ...demo import get_demo_data_with_prefix, update_demo_plot
 from ...ref_loading import BadRisException
+from ...reference import MT
 
 _logger = logging.getLogger(__name__)
 
 
 @main.route('/', methods=['GET', 'POST'])
 def index():
-    # check for populated session
-    has_results = 'bokeh_js' in session
     last_title = session.get('title', None)
     return render_template('home.html', title='Journal Targeter',
-                           last_title=last_title,
-                           )
+                           last_title=last_title,)
 
 
 @main.route('/results', methods=['GET', 'POST'])
 def results():
-    # check for populated session and matching data pickle
-    if 'bokeh_js' not in session:
+    if 'refs_df' not in session:
         flash("Let's start by uploading some data.")
         return redirect(url_for('.search'))
-    # Session is populated.
-
-    bokeh_js = session['bokeh_js']
-    if 'bokeh_divs' not in session:
-        flash("Previous session has expired. Please run a new search.")
-        return redirect(url_for('.search'))
-    else:
-        bokeh_divs = session['bokeh_divs']
-
+    pref_kwargs = _get_pref_dict_from_session()
+    js, divs = get_bokeh_components(session['jf'], session['af'],
+                                    session['refs_df'], store_prefs=True,
+                                    **pref_kwargs)
     return render_template('index.html', title='Results',
                            query_title=session['title'],
                            query_abstract=session['abstract'],
                            query_ris=session['ris_name'],
-                           bokeh_js=bokeh_js,
-                           bokeh_divs=bokeh_divs,
+                           bokeh_js=js,
+                           bokeh_divs=divs,
                            )
 
 
@@ -61,7 +53,6 @@ def demo(demo_prefix=None):
     force_update = (os.environ.get('FORCE_DEMO_UPDATE', 'false').lower()
                     in ['true', '1'])
     if force_update:
-        from ...demo import update_demo_plot
         update_demo_plot(demo_prefix)
     data = get_demo_data_with_prefix(demo_prefix)
     return render_template('index.html', title='Demo',
@@ -81,9 +72,13 @@ def download(category=None):
     if category not in {'demo', 'session'}:
         abort(404)
     if category == 'session':
-        if 'bokeh_js' not in session:
+        if 'refs_df' not in session:
             abort(404)  # session is not populated
         data = session.copy()
+        pref_kwargs = _get_pref_dict_from_session()
+        js, divs = get_bokeh_components(session['jf'], session['af'],
+                                        session['refs_df'], **pref_kwargs)
+        data.update({'bokeh_js': js, 'bokeh_divs': divs})
         time_str = datetime.utcnow().strftime('%Y-%m-%d_%H%M')
         out_name = f"jot_results_{time_str}.html"
         page_title = 'Results (local)'
@@ -131,6 +126,7 @@ def search():
         try:
             jf, af, refs_df = run_queries(
                 query_title=title, query_abstract=abstract, ris_path=tempf)
+            session.update({'jf': jf, 'af': af, 'refs_df': refs_df})
         except BadRisException as e:
             msg = "Invalid RIS file. Please modify and try again."
             if str(e):
@@ -140,13 +136,36 @@ def search():
         finally:
             tempf.close()
             fs.close()
-
-        js, divs = get_bokeh_components(jf, af, refs_df)
-        session['bokeh_js'] = js
-        session['bokeh_divs'] = divs
         return redirect(url_for('.results'))
     # if 'title' in session:
     #     form.title.data = session['title']
     # if 'abstract' in session:
     #     form.abstract.data = session['abstract']
     return render_template('upload.html', form=form, title='Search')
+
+
+@main.route('/prefer', methods=['POST'])
+def set_preference():
+    # allowed args: metric, weight
+    if 'metric' in request.form:
+        val = request.form['metric']
+        if val in MT.metric_list:
+            session['metric'] = val
+            return {'msg': f'Saved {val} as preferred metric.'}
+        else:
+            return {'msg': f'Unknown metric: {val}.'}
+    if 'weight' in request.form:
+        val = request.form['weight']
+        val = round(float(val), 2)  # round to 2dp
+        session['weight'] = val
+        return {'msg': f'Saved {val} as preferred weight.'}
+
+
+def _get_pref_dict_from_session():
+    pref_dict = dict()
+    if 'metric' in session:
+        pref_dict['pref_metric'] = session['metric']
+    if 'weight' in session:
+        pref_dict['pref_weight'] = session['weight']
+    _logger.info(f"{pref_dict=}")
+    return pref_dict
