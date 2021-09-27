@@ -65,9 +65,6 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
     for col in zero_fill_cols:
         jfm[col] = jfm[col].fillna(0).astype(int)
     jfm['CAT'] = jfm['cited'] + jfm['abstract'] + jfm['title']
-    # ADD PROSPECT
-    for impact_col in MT.metric_list:
-        jfm[f'p_{impact_col}'] = jfm['CAT'] / (jfm['CAT'] + jfm[impact_col])
 
     jfm = jfm.sort_values(['CAT', 'sim_sum'], ascending=False).reset_index()  # type: pd.DataFrame
 
