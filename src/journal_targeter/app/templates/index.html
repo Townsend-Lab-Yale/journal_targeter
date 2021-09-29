@@ -51,16 +51,16 @@
               </div>
           </div>
 
-          <div id="accordion">
+          <div id="sidebar-accordion">
 
-            <div class="card border-light">
+            <div class="card">
               <div class="card-header" id="inputs-header">
                   <button class="btn btn-link" data-toggle="collapse" data-target="#inputs-collapse"
                           aria-expanded="true" aria-controls="inputs-collapse">
                     Inputs
                   </button>
               </div>
-              <div id="inputs-collapse" class="collapse show" aria-labelledby="inputs-header" data-parent="#accordion">
+              <div id="inputs-collapse" class="collapse show" aria-labelledby="inputs-header" data-parent="#sidebar-accordion">
                   <div class="card-body">
                     <div id="input-summary">
                       <p class="text-dark font-weight-bold">{{ query_title }}</p>
@@ -90,28 +90,28 @@
                 </div>
               </div>
 
-            <div class="card border-light">
+            <div class="card">
               <div class="card-header" id="tips-header">
                   <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#about-collapse"
                           aria-expanded="false" aria-controls="tips-collapse">
                     About
                   </button>
               </div>
-              <div id="about-collapse" class="collapse" aria-labelledby="tips-header" data-parent="#accordion">
+              <div id="about-collapse" class="collapse" aria-labelledby="tips-header" data-parent="#sidebar-accordion">
                 <div class="card-body">
                     {% include "_info_jane.html" %}
                 </div>
               </div>
             </div>
 
-              <div class="card border-light">
+              <div class="card">
                   <div class="card-header" id="tips-header">
                       <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#tips-collapse"
                               aria-expanded="false" aria-controls="tips-collapse">
                         Exploring the results
                       </button>
                   </div>
-                  <div id="tips-collapse" class="collapse" aria-labelledby="tips-header" data-parent="#accordion">
+                  <div id="tips-collapse" class="collapse" aria-labelledby="tips-header" data-parent="#sidebar-accordion">
                     <div class="card-body">
 
                       {% include '_info_summary.html' %}

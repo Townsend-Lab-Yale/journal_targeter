@@ -83,3 +83,8 @@
 #prefs-div {
     padding: 0.5rem 1rem;
 }
+
+#sidebar-accordion .card-body {
+    max-height: 420px;
+    overflow: auto;
+}
