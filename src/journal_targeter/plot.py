@@ -453,7 +453,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None,
                                        row_height=row_height,
                                        index_position=None, fit_columns=False,
                                        **table_kws)
-    toggle = Toggle(label="Show all metrics", button_type='default', width=150,
+    toggle = Toggle(label="Show all impact metrics", button_type='default', width=150,
                     active=False)
     if mt_obj is not None:
         mt_obj.table_cols = columns
