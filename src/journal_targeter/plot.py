@@ -356,7 +356,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None,
         'in_pmc_str': ('PMC', w_sm),
         # 'conf_title': ('cT', w_sm),
         # 'conf_abstract': ('cA', w_sm),
-        'conf_pc': ('conf', w_sm),
+        # 'conf_pc': ('conf', w_sm),
         'sim_sum': ('∑sim', w_sm),
         'sim_max': ('⤒sim', w_sm),
     })

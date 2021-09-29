@@ -110,13 +110,13 @@ def aggregate_jane_journals_articles(journals_t, journals_a, articles_t,
     j, a = _concat_jane_data(journals_t, journals_a, articles_t, articles_a)
 
     temp = j.copy()
-    temp['conf_sum'] = temp['confidence']  # placeholder for conf sum aggregation
+    # temp['conf_sum'] = temp['confidence']  # placeholder for conf sum aggregation
     groupby_col = 'jid'
     get_first = ['jane_name', 'influence', 'tags', 'uid', 'is_oa']
     # get_first += list(metrics.METRIC_NAMES)
     if from_api:
         get_first.extend(['in_medline', 'in_pmc'])
-    get_sum = ['sim_sum', 'conf_sum']
+    get_sum = ['sim_sum']
     get_max = ['sim_max']
     get_min = ['sim_min']
     get_tuple = ['confidence', 'sims', 'pc_lower']  # inc categ
@@ -133,7 +133,7 @@ def aggregate_jane_journals_articles(journals_t, journals_a, articles_t,
         records.append(rec)
     tuple_cols = pd.DataFrame.from_records(records, index=groupby_col)
     jf = pd.concat([agg_cols, tuple_cols], axis=1)
-    jf['conf_pc'] = jf['conf_sum'] / jf['conf_sum'].sum() * 100
+    # jf['conf_pc'] = jf['conf_sum'] / jf['conf_sum'].sum() * 100
     if not from_api:
         jf['tags'] = jf['tags'].fillna('')
         jf['in_medline'] = jf['tags'].map(lambda v: True if 'Medline' in v else False)
