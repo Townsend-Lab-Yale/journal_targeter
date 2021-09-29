@@ -167,5 +167,4 @@ def _get_pref_dict_from_session():
         pref_dict['pref_metric'] = session['metric']
     if 'weight' in session:
         pref_dict['pref_weight'] = session['weight']
-    _logger.info(f"{pref_dict=}")
     return pref_dict
