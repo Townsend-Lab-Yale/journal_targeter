@@ -64,6 +64,11 @@
     color: lightgray;
 }
 
+#sidebar-cards {
+    display: flex;
+    flex-direction: column;
+}
+
 #sidebar-cards .card-header {
     font-size: 1rem;
     padding: 0rem;
