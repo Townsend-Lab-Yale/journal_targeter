@@ -133,7 +133,6 @@ def aggregate_jane_journals_articles(journals_t, journals_a, articles_t,
         records.append(rec)
     tuple_cols = pd.DataFrame.from_records(records, index=groupby_col)
     jf = pd.concat([agg_cols, tuple_cols], axis=1)
-    # jf['conf_pc'] = jf['conf_sum'] / jf['conf_sum'].sum() * 100
     if not from_api:
         jf['tags'] = jf['tags'].fillna('')
         jf['in_medline'] = jf['tags'].map(lambda v: True if 'Medline' in v else False)

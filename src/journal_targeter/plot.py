@@ -158,7 +158,7 @@ def build_bokeh_sources(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
     jfs['in_ml_str'] = jfs['in_medline'].map({True: '✔', False: '', np.nan: '?'})
     jfs['in_pmc_str'] = jfs['in_pmc'].map({True: '✔', False: '', np.nan: '?'})
     # fill jane metric columns
-    for col in ['conf_pc', 'sim_sum', 'sim_max']:
+    for col in ['sim_sum', 'sim_max']:
         jfs[col].fillna(-1, inplace=True)
 
     jfs['loc_cited'] = 'cited'
@@ -356,7 +356,6 @@ def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None,
         'in_pmc_str': ('PMC', w_sm),
         # 'conf_title': ('cT', w_sm),
         # 'conf_abstract': ('cA', w_sm),
-        # 'conf_pc': ('conf', w_sm),
         'sim_sum': ('∑sim', w_sm),
         'sim_max': ('⤒sim', w_sm),
     })
@@ -423,7 +422,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None,
     format_dict.update({i: _get_formatter_mark_blank_round_dp(dp=0) for i in
                         ['sim_sum', 'sim_max']})
     format_dict.update({i: _get_formatter_mark_blank_round_dp(dp=1) for i in
-                        list(metric_dict) + ['conf_pc']})
+                        list(metric_dict)})
     format_dict.update({'prospect': _get_formatter_mark_blank_round_dp(dp=2)})
     table_cols = OrderedDict({
         col: dict(width=col_param_dict[col][1],
