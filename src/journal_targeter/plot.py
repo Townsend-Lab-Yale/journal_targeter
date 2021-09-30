@@ -19,7 +19,7 @@ from .colors import CATEG_HEX
 from .reference import MT
 
 _URL_NLM_BK = "https://www.ncbi.nlm.nih.gov/nlmcatalog/?term=@uid[nlmid]"
-_URL_NLM_USCORE = "https://www.ncbi.nlm.nih.gov/nlmcatalog/?term=<%= uid %>[nlmid]"
+# _URL_NLM_USCORE = "https://www.ncbi.nlm.nih.gov/nlmcatalog/?term=<%= uid %>[nlmid]"
 _URL_PUBMED = "https://pubmed.ncbi.nlm.nih.gov/@PMID/"
 _URL_ROMEO = "https://v2.sherpa.ac.uk/id/publication/@sr_id"
 _DEFAULT_IMPACT = "CiteScore"
@@ -371,8 +371,9 @@ def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None,
                   f"""<i class="fab fa-creative-commons fa-fw pr-1"></i></a>'"""
 
     title_template = (
-        f"""<a href="{_URL_NLM_USCORE}" target="_blank">"""  # <i class="fas fa-book pr-1"></i>
-        """<i class="fas fa-landmark fa-fw pr-1"></i></a>"""
+        """<%= uid == 'NaN' ? '<i class="fas fa-landmark fa-fw pr-1 icon-empty"></i>' """
+        """: '<a href="https://www.ncbi.nlm.nih.gov/nlmcatalog/?term=' + uid + """
+        """'[nlmid]" target="_blank"><i class="fas fa-landmark fa-fw pr-1"></i></a>' %>"""
         """<%= sr_id == 'NaN' ? '<i class="fas fa-registered fa-fw pr-1 """
         f"""icon-empty"></i>' : {sr_template} %><%= url_doaj == 'NaN' ? """
         f"""'<i class="fab fa-creative-commons fa-fw pr-1 icon-empty"></i>' : {cc_template} %>"""
