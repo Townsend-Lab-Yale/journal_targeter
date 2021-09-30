@@ -170,6 +170,7 @@ def build_bokeh_sources(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
     jfs['impact_max'] = jfs['ax_impact'].max()
     jfs['ax_match'] = jfs[_DEFAULT_MATCH]  # redundant column for suitability toggling
     jfs['prospect'] = jfs['CAT'] / (jfs['CAT'] + pref_weight * jfs['ax_impact'])
+    jfs['prospect'] = jfs['prospect'].where(jfs['ax_impact'] >= 0, -1)
     jfs['label_metric'] = jfs[f"label_{pref_metric}"]
 
     source_j = bkm.ColumnDataSource(jfs)
@@ -631,6 +632,7 @@ def _mark_dominant_journals(df, metric, weight=_DEFAULT_WEIGHT):
     """Add 'dominant_<metric>' column to journals table."""
 
     prospects = df['CAT'] / (df['CAT'] + weight * df[metric])  # type: pd.Series
+    prospects = prospects.where(df[metric] >= 0, -1)
 
     def row_is_dominated(temp):
         temp_p = prospects[temp.name]
