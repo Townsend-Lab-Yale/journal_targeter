@@ -93,3 +93,8 @@
     max-height: 420px;
     overflow: auto;
 }
+
+/* Prevent vertical squeeze of ICATS central tooltips  */
+.bk-root > div > div:nth-child(2) .bk-tooltip {
+	min-width: 350px;
+}

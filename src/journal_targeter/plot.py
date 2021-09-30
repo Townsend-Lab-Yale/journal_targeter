@@ -569,24 +569,19 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None,
     taptool.callback = bkm.OpenURL(url=_URL_PUBMED)
 
     # HOVERTOOLS
-    cite_cols_dict = {'use_year': 'year',
-                      'use_article_title': 'title',
-                      'use_authors': 'authors'}
-    tooltips_c = [(cite_cols_dict[i], f"@{i}") for i in cite_cols_dict]
+    tooltips_c = [
+        ('article', "@use_authors (@use_year): @use_article_title"),
+    ]
     hover_c = bkm.HoverTool(renderers=[r_ac], tooltips=tooltips_c)
-
     impact_dict = OrderedDict({'journal_name': 'Journal'})
     impact_dict.update({f"{i}_str": i for i in MT.metric_list})
     impact_dict['tags'] = 'tags'
     impact_tooltips = [(impact_dict[i], f"@{i}") for i in impact_dict]
     hover_i = bkm.HoverTool(renderers=[r_ibg], tooltips=impact_tooltips)
-
-    a_cols_dict = {'year': 'year',
-                   'title': 'title',
-                   'authors_short': 'authors',
-                   # 'url': 'url',
-                   'sim_max': 'sim'}
-    article_tooltips = [(a_cols_dict[i], f"@{i}") for i in a_cols_dict]  # [("(x,y)", "($x, $y)")]
+    article_tooltips = [
+        ('article', "@authors_short (@year): @title"),
+        ('sim', '@sim_max')
+    ]
     hover_a = bkm.HoverTool(renderers=[r_aa, r_at], tooltips=article_tooltips)
     hover_s = bkm.HoverTool(renderers=[r_as], tooltips=article_tooltips)
 
