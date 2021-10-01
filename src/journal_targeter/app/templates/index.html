@@ -99,7 +99,16 @@
                   </button>
               </div>
               <div class="card-body" id="prefs-div">
-                    {{ bokeh_divs['prefs_widgets']|safe }}
+                  <div class="d-flex">
+                      {{ bokeh_divs['prefs_widgets']|safe }}
+                      <div style="align-items: flex-end; margin-top: auto; padding-bottom: 5px;">
+                          <span data-toggle="tooltip" data-placement="top"
+                      title="Weight is used in Prospect calculation.
+                      See 'Exploring the Results' for more info.">
+                        <i class="fas fa-info-circle text-"></i>
+                          </span>
+                      </div>
+                  </div>
               </div>
           </div>
 
