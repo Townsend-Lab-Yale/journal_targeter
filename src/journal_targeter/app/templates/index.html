@@ -21,15 +21,71 @@
             <div class="tab-content" id="myTabContent">
               <div class="tab-pane fade show active" id="prospect" role="tabpanel" aria-labelledby="prospect-tab">
                   {{ bokeh_divs['prospect']|safe }}
+
+              <figure class="container">
+              <figcaption class="figure-caption mt-3">
+                <ul class="pl-4">
+                    <li>
+                      'Open' journals are those included in the <a href="https://doaj.org/" target="_blank">
+                      Directory of Open Access Journals (DOAJ)</a>. All other journals are considered 'closed'.
+                    </li>
+                    <li>
+                      'Closed' journals may have open access pathways. For details,
+                        follow <i class="fas fa-registered fa-fw text-primary"></i>
+                        Sherpa Romeo links in the <a class="text-primary cite-table" type="button">Table</a> tab.
+                    </li>
+                    <li>
+                        See <a class="text-primary cite-explore-prospect" type="button">Exploring the Results</a> for more info
+                        on the Prospect metric.
+                    </li>
+                </ul>
+              </figcaption>
+              </figure>
+
               </div>
+
               <div class="tab-pane fade" id="icats" role="tabpanel" aria-labelledby="icats-tab">
+                  <figure class="container">
+                  <figcaption class="figure-caption mt-2 mb-2">
+                    <ul class="pl-4 mb-0">
+                        <li>Scatter markers link to an article's PubMed article entry.</li>
+                        <li>See <a class="text-primary cite-explore-icats" type="button">Exploring the Results</a> for more info.</li>
+                    </ul>
+                  </figcaption>
+                  </figure>
                   {{ bokeh_divs['icats']|safe }}
               </div>
+
               <div class="tab-pane fade" id="table" role="tabpanel" aria-labelledby="table-tab">
+                  <figure class="container">
+                  <figcaption id="caption-prospect" class="figure-caption mt-2 mb-2">
+                    <ul class="pl-4 mb-0">
+                      <li>Icons provide external links to NLM <i class="fas fa-landmark fa-fw"></i>,
+                        Sherpa Romeo <i class="fas fa-registered fa-fw"></i>, and the Directory of Open Access Journals (DOAJ)
+                          <i class="fab fa-creative-commons fa-fw"></i>.</li>
+                      <li>See <a class="text-primary cite-explore-table" type="button">Exploring the Results</a> for more info.
+                      </li>
+                    </ul>
+                  </figcaption>
+                  </figure>
                   {{ bokeh_divs['table']|safe }}
               </div>
               <div class="tab-pane fade" id="fit" role="tabpanel" aria-labelledby="fit-tab">
                   {{ bokeh_divs['fit']|safe }}
+                  <figure class="container">
+                  <figcaption class="figure-caption mt-3">
+                    <ul class="pl-4">
+                    <li>'Open' journals are those included in the <a href="https://doaj.org/" target="_blank">
+                      Directory of Open Access Journals (DOAJ)</a>. All other journals are considered 'closed'.</li>
+                    <li>
+                      'Closed' journals may have open access pathways. For details,
+                        follow <i class="fas fa-registered fa-fw text-primary"></i>
+                        Sherpa Romeo links in the <a class="text-primary cite-table" type="button">Table</a> tab.
+                    </li>
+                        <li>See <a class="text-primary cite-explore-fit" type="button">Exploring the Results</a> for more info.</li>
+                    </ul>
+                  </figcaption>
+                  </figure>
               </div>
             </div>
 
