@@ -152,13 +152,13 @@
               </div>
 
             <div class="card">
-              <div class="card-header" id="tips-header">
-                  <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#about-collapse"
-                          aria-expanded="false" aria-controls="tips-collapse">
+              <div class="card-header" id="about-header">
+                  <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#about"
+                          aria-expanded="false" aria-controls="about">
                     About
                   </button>
               </div>
-              <div id="about-collapse" class="collapse" aria-labelledby="tips-header" data-parent="#sidebar-accordion">
+              <div id="about" class="collapse" aria-labelledby="about-header" data-parent="#sidebar-accordion">
                 <div class="card-body">
                     {% include "_info_jane.html" %}
                 </div>
@@ -167,53 +167,53 @@
 
               <div class="card">
                   <div class="card-header" id="tips-header">
-                      <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#tips-collapse"
-                              aria-expanded="false" aria-controls="tips-collapse">
+                      <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#tips"
+                              aria-expanded="false" aria-controls="tips">
                         Exploring the results
                       </button>
                   </div>
-                  <div id="tips-collapse" class="collapse" aria-labelledby="tips-header" data-parent="#sidebar-accordion">
+                  <div id="tips" class="collapse" aria-labelledby="tips-header" data-parent="#sidebar-accordion">
                     <div class="card-body">
 
                       {% include '_info_summary.html' %}
 
                       <h6 id="info-prospect-header">
-                        1. <a class="collapsed" data-toggle="collapse" href="#info-prospect-collapse"
+                        1. <a class="collapsed" data-toggle="collapse" href="#info-prospect"
                                 aria-expanded="false" aria-controls="inputs-collapse">
                           Prospect
                         </a>
                       </h6>
-                      <div id="info-prospect-collapse" class="collapse" aria-labelledby="info-prospect-header">
+                      <div id="info-prospect" class="collapse" aria-labelledby="info-prospect-header">
                         {% include "_info_prospect.html" %}
                       </div>
 
                       <h6 id="info-icats-header">
-                        2. <a class="collapsed" data-toggle="collapse" href="#info-icats-collapse"
+                        2. <a class="collapsed" data-toggle="collapse" href="#info-icats"
                                 aria-expanded="false" aria-controls="inputs-collapse">
                           ICATS
                         </a>
                       </h6>
-                      <div id="info-icats-collapse" class="collapse" aria-labelledby="info-icats-header">
+                      <div id="info-icats" class="collapse" aria-labelledby="info-icats-header">
                         {% include "_info_icats.html" %}
                       </div>
 
                       <h6 id="info-table-header">
-                        3. <a class="collapsed" data-toggle="collapse" href="#info-table-collapse"
+                        3. <a class="collapsed" data-toggle="collapse" href="#info-table"
                                 aria-expanded="false" aria-controls="inputs-collapse">
                           Table
                         </a>
                       </h6>
-                      <div id="info-table-collapse" class="collapse" aria-labelledby="info-table-header">
+                      <div id="info-table" class="collapse" aria-labelledby="info-table-header">
                         {% include "_info_table.html" %}
                       </div>
 
                       <h6 id="info-fit-header">
-                        4. <a class="collapsed" data-toggle="collapse" href="#info-fit-collapse"
+                        4. <a class="collapsed" data-toggle="collapse" href="#info-fit"
                                 aria-expanded="false" aria-controls="inputs-collapse">
                           Fit
                         </a>
                       </h6>
-                      <div id="info-fit-collapse" class="collapse" aria-labelledby="info-fit-header">
+                      <div id="info-fit" class="collapse" aria-labelledby="info-fit-header">
                         {% include "_info_fit.html" %}
                       </div>
 
