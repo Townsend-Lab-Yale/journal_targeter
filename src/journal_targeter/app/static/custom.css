@@ -98,3 +98,11 @@
 .bk-root > div > div:nth-child(2) .bk-tooltip {
 	min-width: 350px;
 }
+
+figcaption {
+    margin-bottom: .5rem;
+}
+
+figcaption li {
+    font-size: small;
+}
