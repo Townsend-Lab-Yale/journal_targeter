@@ -233,23 +233,58 @@
 {{ super() }}
 {{ bokeh_js|safe }}
 <script>
-    let timer = setInterval(function() {
-        let attempts = 0;
-        const table_cells = $('.slick-cell');
-        const tooltip_objs = $('[data-toggle="tooltip"]');
-        if (table_cells.length > 0) {
-            clearInterval(timer);
-            console.log("Initializing tooltips.");
-            tooltip_objs.tooltip();
-        } else {
-            attempts++;
-            if (attempts > 100) {
-                clearInterval(timer);
-                console.log("Giving up on tooltip initialization.");
-                return;
-            }
-            console.log(`No table cell elements yet (attempt ${attempts}).`);
+    const scroll_fn = ($parent, $child) => {
+        const dist_from_header_top = $child.position().top;
+        const card_header_height = $child.offsetParent().children().first().height();
+        const dist_from_header = dist_from_header_top - card_header_height;
+        const hidden = $parent.scrollTop()
+        const scroll_dist = dist_from_header + hidden;
+        $parent.animate({scrollTop: scroll_dist}, 800, 'swing');
         }
-    }, 1000)
+
+    $(function () {
+        $('a.cite-table').click( e => {
+            $('#table-tab').click();
+        });
+        $('a.cite-explore-prospect').click( e => {
+            $('#tips').collapse('show');
+            $('#info-prospect').collapse('show');
+            scroll_fn($('#tips .card-body'), $('#info-prospect-header'));
+        });
+        $('a.cite-explore-table').click( e => {
+            $('#tips').collapse('show');
+            $('#info-table').collapse('show');
+            scroll_fn($('#tips .card-body'), $('#info-table-header'));
+        });
+        $('a.cite-explore-icats').click( e => {
+            $('#tips').collapse('show');
+            $('#info-icats').collapse('show');
+            scroll_fn($('#tips .card-body'), $('#info-icats-header'));
+        });
+        $('a.cite-explore-fit').click( e => {
+            $('#tips').collapse('show');
+            $('#info-fit').collapse('show');
+            scroll_fn($('#tips .card-body'), $('#info-fit-header'));
+        });
+
+        let timer = setInterval(function () {
+            let attempts = 0;
+            const table_cells = $('.slick-cell');
+            const tooltip_objs = $('[data-toggle="tooltip"]');
+            if (table_cells.length > 0) {
+                clearInterval(timer);
+                console.log("Initializing tooltips.");
+                tooltip_objs.tooltip();
+            } else {
+                attempts++;
+                if (attempts > 100) {
+                    clearInterval(timer);
+                    console.log("Giving up on tooltip initialization.");
+                    return;
+                }
+                console.log(`No table cell elements yet (attempt ${attempts}).`);
+            }
+        }, 1000)
+    })
 </script>
 {% endblock %}
