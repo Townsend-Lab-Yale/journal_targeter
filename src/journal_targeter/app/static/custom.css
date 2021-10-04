@@ -94,7 +94,7 @@
     overflow: auto;
 }
 
-/* Prevent vertical squeeze of ICATS central tooltips  */
+/* Prevent vertical squeeze of Articles central tooltips  */
 .bk-root > div > div:nth-child(2) .bk-tooltip {
 	min-width: 350px;
 }

@@ -9,7 +9,7 @@
                 <a class="nav-link active" id="prospect-tab" data-toggle="tab" href="#prospect" role="tab" aria-controls="prospect" aria-selected="false">Prospect</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" id="icats-tab" data-toggle="tab" href="#icats" role="tab" aria-controls="icats" aria-selected="false">ICATS</a>
+                <a class="nav-link" id="articles-tab" data-toggle="tab" href="#articles" role="tab" aria-controls="articles" aria-selected="false">Articles</a>
               </li>
               <li class="nav-item">
                 <a class="nav-link" id="table-tab" data-toggle="tab" href="#table" role="tab" aria-controls="datatable" aria-selected="false">Table</a>
@@ -44,12 +44,12 @@
 
               </div>
 
-              <div class="tab-pane fade" id="icats" role="tabpanel" aria-labelledby="icats-tab">
+              <div class="tab-pane fade" id="articles" role="tabpanel" aria-labelledby="articles-tab">
                   <figure class="container">
                   <figcaption class="figure-caption mt-2 mb-2">
                     <ul class="pl-4 mb-0">
                         <li>Scatter markers link to an article's PubMed article entry.</li>
-                        <li>See <a class="text-primary cite-explore-icats" type="button">Exploring the Results</a> for more info.</li>
+                        <li>See <a class="text-primary cite-explore-articles" type="button">Exploring the Results</a> for more info.</li>
                     </ul>
                   </figcaption>
                   </figure>
@@ -188,13 +188,13 @@
                         {% include "_info_prospect.html" %}
                       </div>
 
-                      <h6 id="info-icats-header">
-                        2. <a class="collapsed" data-toggle="collapse" href="#info-icats"
+                      <h6 id="info-articles-header">
+                        2. <a class="collapsed" data-toggle="collapse" href="#info-articles"
                                 aria-expanded="false" aria-controls="inputs-collapse">
-                          ICATS
+                          Articles
                         </a>
                       </h6>
-                      <div id="info-icats" class="collapse" aria-labelledby="info-icats-header">
+                      <div id="info-articles" class="collapse" aria-labelledby="info-articles-header">
                         {% include "_info_icats.html" %}
                       </div>
 
@@ -257,10 +257,10 @@
             $('#info-table').collapse('show');
             scroll_fn($('#tips .card-body'), $('#info-table-header'));
         });
-        $('a.cite-explore-icats').click( e => {
+        $('a.cite-explore-articles').click( e => {
             $('#tips').collapse('show');
-            $('#info-icats').collapse('show');
-            scroll_fn($('#tips .card-body'), $('#info-icats-header'));
+            $('#info-articles').collapse('show');
+            scroll_fn($('#tips .card-body'), $('#info-articles-header'));
         });
         $('a.cite-explore-fit').click( e => {
             $('#tips').collapse('show');
