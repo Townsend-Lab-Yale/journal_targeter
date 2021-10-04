@@ -50,8 +50,9 @@ class ModelTracker:
 def get_bokeh_components(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
                          pref_weight=_DEFAULT_WEIGHT, store_prefs=False):
     """Returns bokeh_js, bokeh_divs."""
-    source_j, source_a, source_c = build_bokeh_sources(jf, af, refs_df)
-
+    source_j, source_a, source_c = build_bokeh_sources(jf, af, refs_df,
+                                                       pref_metric=pref_metric,
+                                                       pref_weight=pref_weight)
     filter_dict = {
         'is_open': bkm.BooleanFilter(jf['is_open'].eq(True)),
         'is_closed': bkm.BooleanFilter(~jf['is_open'].eq(True)),
