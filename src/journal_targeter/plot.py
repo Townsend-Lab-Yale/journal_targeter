@@ -70,10 +70,12 @@ def get_bokeh_components(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
     }
     plots = OrderedDict()
     mt = ModelTracker()
+    skip_refs = len(source_c.to_df()) == 0
     plots['icats'] = plot_icats(source_j, source_a, source_c,
                                 filter_dict=filter_dict, mt_obj=mt,
-                                pref_metric=pref_metric)
-    plots['table'] = plot_datatable(source_j, mt_obj=mt, pref_metric=pref_metric)
+                                pref_metric=pref_metric, skip_refs=skip_refs)
+    plots['table'] = plot_datatable(source_j, mt_obj=mt, pref_metric=pref_metric,
+                                    skip_refs=skip_refs)
     plots['fit'] = plot_fit_scatter(source_j, filter_dict=filter_dict,
                                     mt_obj=mt, pref_metric=pref_metric)
     plots['prospect'] = plot_prospect_scatter(source_j, filter_dict=filter_dict,
@@ -162,9 +164,9 @@ def build_bokeh_sources(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
     for col in ['sim_sum', 'sim_max']:
         jfs[col].fillna(-1, inplace=True)
 
-    jfs['loc_cited'] = 'cited'
-    jfs['loc_abstract'] = 'abstract'
-    jfs['loc_title'] = 'title'
+    jfs['loc_cited'] = 'Cited'
+    jfs['loc_abstract'] = 'Abstract'
+    jfs['loc_title'] = 'Title'
     jfs['ax_impact'] = jfs[pref_metric]  # redundant column for metric toggling
     jfs['dominant'] = jfs[f'dominant_{pref_metric}']
     jfs['ax_impact_bg'] = (jfs['ax_impact'] < 1).map({True: 'whitesmoke', False: 'white'})
@@ -173,21 +175,22 @@ def build_bokeh_sources(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
     jfs['prospect'] = jfs['CAT'] / (jfs['CAT'] + pref_weight * jfs['ax_impact'])
     jfs['prospect'] = jfs['prospect'].where(jfs['ax_impact'] >= 0, -1)
     jfs['label_metric'] = jfs[f"label_{pref_metric}"]
-
+    jfs.rename(columns={i: i.title() for i in ['cited', 'title', 'abstract']},
+               inplace=True)
     source_j = bkm.ColumnDataSource(jfs)
 
     # ARTICLES
     afs = af[af.jid.isin(jfs.jid)].copy()
-    afs['loc_abstract'] = 'abstract'
-    afs['loc_title'] = 'title'
+    afs['loc_abstract'] = 'Abstract'
+    afs['loc_title'] = 'Title'
     source_a = bkm.ColumnDataSource(afs)
 
     # CITATIONS. user cited articles that overlap jane journal results
     if refs_df is not None:
         cited = refs_df.copy()
-        cited['loc_cited'] = 'cited'
+        cited['loc_cited'] = 'Cited'
     else:
-        cited = pd.DataFrame(columns=['jid', 'cited', 'loc_cited'])
+        cited = pd.DataFrame(columns=['jid', 'Cited', 'loc_cited'])
     source_c = bkm.ColumnDataSource(cited)
 
     return source_j, source_a, source_c
@@ -318,7 +321,7 @@ def _add_scatter(fig=None, source=None, filter_dict=None, **kwargs):
 
     tooltips = [('Journal', '@journal_name')]
     tooltips.extend([(i, f'@{i + "_str"}') for i in MT.metric_list])
-    tooltips.append(('CAT', '@CAT (@cited, @abstract, @title)'))
+    tooltips.append(('CAT', '@CAT (@Cited, @Abstract, @Title)'))
 
     fig.add_tools(bkm.HoverTool(renderers=[r1_open, r1_closed], tooltips=tooltips))  # , callback=cb_hover
     taptool = fig.select(type=bkm.TapTool)
@@ -327,7 +330,7 @@ def _add_scatter(fig=None, source=None, filter_dict=None, **kwargs):
 
 
 def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None,
-                   pref_metric=_DEFAULT_IMPACT):
+                   pref_metric=_DEFAULT_IMPACT, skip_refs=False):
     if not table_kws:
         table_kws = {}
     col_kws = {
@@ -346,13 +349,15 @@ def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None,
     # metric_dict['Influence'] = ('Inf', w_sm)
     col_param_dict = OrderedDict({
         'journal_name': ('Journal', w_journal),
-        'CAT': ('CAT', w_sm),
-        'cited': ('C', w_xs),
-        'abstract': ('A', w_xs),
-        'title': ('T', w_xs),
+        'CAT': ('A+T' if skip_refs else 'CAT', w_xs),
+        'Cited': ('C', w_xs),
+        'Abstract': ('A', w_xs),
+        'Title': ('T', w_xs),
         'both': ('A&T', w_xs),
         'doaj_score': ('DOAJ', w_doaj),
     })
+    # if skip_refs:
+    #     col_param_dict.pop('Cited')
     col_param_dict.update(metric_dict)
     col_param_dict.update({
         'prospect': ('P', w_sm),
@@ -441,9 +446,11 @@ def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None,
     columns = []  # FOR DataTable
     metric_col_inds = {}
     for ind, col in enumerate(col_param_dict):
-        columns.append(bkm.widgets.TableColumn(
-            field=col, title=col_param_dict[col][0],
-            **table_cols[col]))
+        bk_col = bkm.widgets.TableColumn(field=col, title=col_param_dict[col][0],
+                                         **table_cols[col])
+        if skip_refs and col == 'Cited':
+            bk_col.visible = False
+        columns.append(bk_col)
         if col in MT.metric_list:
             metric_col_inds[col] = ind
     # Hide metric columns if necessary
@@ -479,21 +486,19 @@ def _get_formatter_mark_blank_round_dp(dp=1):
 
 
 def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None,
-               mt_obj=None, pref_metric=_DEFAULT_IMPACT):
+               mt_obj=None, pref_metric=_DEFAULT_IMPACT, skip_refs=False):
     """Create interactive ICATS scatter plot.
 
     Returns:
          (js, div) Bokeh javascript and html div elements if
          as_components=True, else notebook handle.
     """
-    # if n_journals is None:
-    #     n_journals = len(jf)
-    width_l, width_m, width_r = 300, 120, 300
+    width_l, width_m, width_r = (300, 80, 300) if skip_refs else (300, 120, 300)
+    factors = ['Abstract', 'Title'] if skip_refs else ['Cited', 'Abstract', 'Title']
     TOOLS = "ypan,ywheel_zoom,reset,tap"
 
     text_props = {"text_align": "center", "text_baseline": "middle",
                   'text_color': '#000000', 'text_font_size': '10pt'}
-    factors = ['cited', 'abstract', 'title']
     stack_factors = ['cited', 'title_only', 'abstract_only', 'both']
     # categ_colors = dict(zip(stack_factors, bk.palettes.Colorblind4))
     a_colors = [CATEG_HEX[i] for i in stack_factors]
@@ -507,8 +512,9 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None,
 
     # JID / NAME TUPLES FOR Y RANGES
     jfs = source_j.to_df()  # temporary dataframe to simplify calculations
-    factor_dict = _get_journal_factor_dict(jfs)
-    factors_default = [tuple(i) for i in factor_dict['CAT']]
+    factor_dict = _get_journal_factor_dict(jfs, skip_refs=skip_refs)
+    _first_factor = next((i for i in factor_dict.keys()))
+    factors_default = [tuple(i) for i in factor_dict[_first_factor]]
     jname_factors = bkm.FactorRange(factors=factors_default,  # bounds=(-200, 50),
                                     factor_padding=0, group_padding=0)
 
@@ -520,13 +526,15 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None,
         plot_width=width_m, plot_height=plot_height,
         x_axis_location="above")
     # INDIVIDUAL ARTICLE RECT GLYPHS
-    r_ac = p.rect(y='jid', x='loc_cited', color=CATEG_HEX['cited'], width=0.95, height=0.95, fill_alpha=0.3, source=source_c)
+    if not skip_refs:
+        r_ac = p.rect(y='jid', x='loc_cited', color=CATEG_HEX['cited'], width=0.95, height=0.95, fill_alpha=0.3, source=source_c)
     r_aa = p.rect(y='jid', x='loc_abstract', color=CATEG_HEX['abstract'], width=0.95, height=0.95, fill_alpha=0.3, source=source_a, view=view_aa)
     r_at = p.rect(y='jid', x='loc_title', color=CATEG_HEX['title'], width=0.95, height=0.95, fill_alpha=0.3, source=source_a, view=view_at)
     # OVERLAYED TEXT GLYPHS
-    p.text(y='jid', x='loc_cited', text='cited', source=source_j, **text_props)
-    p.text(y='jid', x='loc_abstract', text='abstract', source=source_j, **text_props)
-    p.text(y='jid', x='loc_title', text='title', source=source_j, **text_props)
+    if not skip_refs:
+        p.text(y='jid', x='loc_cited', text='Cited', source=source_j, **text_props)
+    p.text(y='jid', x='loc_abstract', text='Abstract', source=source_j, **text_props)
+    p.text(y='jid', x='loc_title', text='Title', source=source_j, **text_props)
 
     # LEFT HAND SIDE: IMPACT
     impact_max_initial = jfs['impact_max'].iloc[0]
@@ -542,8 +550,8 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None,
     r_ibg = p_l.hbar(y='jid', height=1, left=0, right='impact_max',
                      source=source_j, color='ax_impact_bg')
     view_known = bkm.CDSView(source=source_j, filters=[filter_dict['known_metric']])
-    r_i = p_l.hbar(y='jid', height=0.4, left=0, right='ax_impact',
-                   source=source_j, view=view_known)
+    p_l.hbar(y='jid', height=0.4, left=0, right='ax_impact', source=source_j,
+             view=view_known)
     taptool_impact = p_l.select(type=bkm.TapTool)
     taptool_impact.callback = bkm.OpenURL(url=_URL_NLM_BK)
 
@@ -577,7 +585,8 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None,
     tooltips_c = [
         ('article', "@use_authors (@use_year): @use_article_title"),
     ]
-    hover_c = bkm.HoverTool(renderers=[r_ac], tooltips=tooltips_c)
+    if not skip_refs:
+        hover_c = bkm.HoverTool(renderers=[r_ac], tooltips=tooltips_c)
     impact_dict = OrderedDict({'journal_name': 'Journal'})
     impact_dict.update({f"{i}_str": i for i in MT.metric_list})
     impact_dict['tags'] = 'tags'
@@ -591,7 +600,9 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None,
     hover_s = bkm.HoverTool(renderers=[r_as], tooltips=article_tooltips)
 
     p_l.add_tools(hover_i)
-    p.add_tools(hover_a, hover_c)
+    p.add_tools(hover_a)
+    if not skip_refs:
+        p.add_tools(hover_c)
     p_r.add_tools(hover_s)
 
     # MINIMAL STYLING FOR AXES/TICKS/GRIDLINES
@@ -657,18 +668,20 @@ def _mark_dominant_journals(df, metric, weight=_DEFAULT_WEIGHT):
     df[f'label_{metric}'] = df['abbr'].where(is_dominant, '')
 
 
-def _get_journal_factor_dict(jf):
+def _get_journal_factor_dict(jf, skip_refs=False):
     """Create dictionary of sorting name -> factor range."""
     metric_col_dict = {i: i for i in MT.metric_list}
-    sort_dict = OrderedDict({'CAT': ['CAT', 'sim_sum']})
+    cat_label = 'A+T' if skip_refs else 'C+A+T'
+    sort_dict = OrderedDict({cat_label: ['CAT', 'sim_sum']})
     for metric_name in metric_col_dict:
         sort_dict[metric_name] = [metric_col_dict[metric_name], 'sim_sum']
-    sort_dict.update([
-                      ('Max similarity', ['sim_max', 'sim_sum']),
-                      ('Cited', ['cited', 'sim_sum']),
-                      ('Abstract', ['abstract', 'sim_sum']),
-                      ('Title', ['title', 'sim_sum']),
-                      ])
+    # sort_dict.update([
+    sort_dict['Max similarity'] = ['sim_max', 'sim_sum']
+    sort_dict['Max similarity'] = ['sim_max', 'sim_sum']
+    if not skip_refs:
+        sort_dict['Cited'] = ['Cited', 'sim_sum']
+    sort_dict['Abstract'] = ['Abstract', 'sim_sum']
+    sort_dict['Title'] = ['Title', 'sim_sum']
     index_dict = {}
     for sort_name in sort_dict:
         index_dict[sort_name] = \
