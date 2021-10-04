@@ -11,6 +11,11 @@
             <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
             <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.1/css/all.css" integrity="sha384-vp86vTRFVJgpjF9jiIGPEEqYqlDwgyBgEF109VFjmqGmIY/Y4HV4d3Gp2irVfcrp" crossorigin="anonymous">
             <style>{{ get_static_text('custom.css') | safe }}</style>
+            {% if skip_refs %}
+            <style>{{ get_static_text('table_colors_norefs.css') | safe }}</style>
+            {% else %}
+            <style>{{ get_static_text('table_colors_full.css') | safe }}</style>
+            {% endif %}
         {% endblock styles %}
 
         <title>{% block title %}{{title|default}}{% endblock title %}</title>

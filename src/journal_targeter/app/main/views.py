@@ -35,12 +35,14 @@ def results():
     js, divs = get_bokeh_components(session['jf'], session['af'],
                                     session['refs_df'], store_prefs=True,
                                     **pref_kwargs)
+    skip_refs = session['refs_df'] is None
     return render_template('index.html', title='Results',
                            query_title=session['title'],
                            query_abstract=session['abstract'],
                            query_ris=session['ris_name'],
                            bokeh_js=js,
                            bokeh_divs=divs,
+                           skip_refs=skip_refs,
                            )
 
 
@@ -82,6 +84,7 @@ def download(category=None):
         time_str = datetime.utcnow().strftime('%Y-%m-%d_%H%M')
         out_name = f"jot_results_{time_str}.html"
         page_title = 'Results (local)'
+        skip_refs = session['refs_df'] is None
     else:  # Use demo data
         prefix = request.args.get('prefix', current_app.config['DEMO_PREFIX'])
         data = get_demo_data_with_prefix(prefix)
@@ -89,6 +92,7 @@ def download(category=None):
             abort(404)
         out_name = f'demo_{prefix}.html'
         page_title = f'{prefix} (local)'
+        skip_refs = False
     html = render_template('index.html', title=page_title,
                            standalone=True,
                            query_title=data['title'],
@@ -96,6 +100,7 @@ def download(category=None):
                            query_ris=data['ris_name'],
                            bokeh_js=data['bokeh_js'],
                            bokeh_divs=data['bokeh_divs'],
+                           skip_refs=skip_refs,
                            )
     tmp_bytes = BytesIO()
     tmp_bytes.write(html.encode('utf-8'))

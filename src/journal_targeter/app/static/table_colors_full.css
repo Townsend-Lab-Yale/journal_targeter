@@ -1,0 +1,39 @@
+.slick-cell.selected:nth-child(2) {  /* CAT */
+    background-color: #848484;
+    color: white;
+}
+.slick-cell:nth-child(2) {  /* CAT */
+    background-color: #84848480;
+}
+
+.slick-cell.selected:nth-child(3) {  /* Cited */
+    background-color: rgb(230, 159, 0); /*#0072b2;*/
+    /*color: white;*/
+}
+.slick-cell:nth-child(3) {  /* Cited */
+    background-color: rgba(230, 159, 0, 0.5);
+}
+
+.slick-cell.selected:nth-child(4) {  /* Abstract */
+    background-color: rgb(86, 180, 233);
+}
+.slick-cell:nth-child(4) {  /* Abstract */
+    background-color: rgba(86, 180, 233, 0.5);
+    /*color: white;*/
+}
+
+.slick-cell.selected:nth-child(5) {  /* Title */
+    background-color: rgb(240, 228, 66);
+    /*color: #56b4e9;*/
+}
+.slick-cell:nth-child(5) {  /* Title */
+    background-color: rgba(240, 228, 66, 0.5);
+}
+
+.slick-cell.selected:nth-child(6) {  /* A&T */
+    background-color: rgb(0, 158, 115);
+    color: white;
+}
+.slick-cell:nth-child(6) {  /* A&T */
+    background-color: rgba(0, 158, 115, 0.5);
+}
