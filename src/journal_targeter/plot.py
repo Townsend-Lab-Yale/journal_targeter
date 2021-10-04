@@ -183,8 +183,11 @@ def build_bokeh_sources(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
     source_a = bkm.ColumnDataSource(afs)
 
     # CITATIONS. user cited articles that overlap jane journal results
-    cited = refs_df.copy()
-    cited['loc_cited'] = 'cited'
+    if refs_df is not None:
+        cited = refs_df.copy()
+        cited['loc_cited'] = 'cited'
+    else:
+        cited = pd.DataFrame(columns=['jid', 'cited', 'loc_cited'])
     source_c = bkm.ColumnDataSource(cited)
 
     return source_j, source_a, source_c

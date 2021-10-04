@@ -33,28 +33,35 @@ def run_queries(query_title=None, query_abstract=None, ris_path=None, refs_df=No
             af: aggregated articles table, combining dups across searches.
             refs_df: table of de-duplicated articles from citations file.
     """
-    if query_title is None or query_abstract is None or (ris_path is None and
-                                                         refs_df is None):
+    if query_title is None or query_abstract is None:
         raise ValueError("Provide query abstract, title and reference info.")
+    elif ris_path is not None and refs_df is not None:
+        raise ValueError("Provide ris_path or refs_df, not both.")
+
+    if ris_path is None:
+        refs_kw = dict() if refs_df is None else dict(refs_df=refs_df)
     else:
-        refs_kw = dict(ris_path=ris_path) if refs_df is None else \
-            dict(refs_df=refs_df)
-        journals_t, articles_t, refs_df = process_inputs(
-            input_text=query_title, input_type='TITLE', **refs_kw)
-        journals_a, articles_a, _ = process_inputs(
-            input_text=query_abstract, input_type='ABSTRACT', refs_df=refs_df)
+        refs_kw = dict(ris_path=ris_path)
+    journals_t, articles_t, refs_df = process_inputs(
+        input_text=query_title, input_type='TITLE', **refs_kw)
+    journals_a, articles_a, _ = process_inputs(
+        input_text=query_abstract, input_type='ABSTRACT', refs_df=refs_df)
 
     jf, af = aggregate_jane_journals_articles(journals_t, journals_a,
                                               articles_t, articles_a)
-    _add_jids_names_to_refs(refs_df, jf)  # finalize refs table
-
-    # COMBINE CITED JOURNALS WITH JANE JOURNALS (-> JFM)
-    citations = refs_df[['jid', 'refs_name', 'uid']].value_counts() \
-        .reset_index(level=[1, 2]).rename(
-            columns={0: 'cited'})
-    jfm = jf.join(citations, how='outer', lsuffix='_jane', rsuffix='_refs')
-    jfm.insert(0, 'uid', jfm.uid_refs.where(jfm.uid_jane.isnull(), jfm.uid_jane))
-    jfm['cited'] = jfm['cited'].fillna(0).astype(int)
+    if refs_df is not None:
+        _add_jids_names_to_refs(refs_df, jf)  # finalize refs table
+        # COMBINE CITED JOURNALS WITH JANE JOURNALS (-> JFM)
+        citations = refs_df[['jid', 'refs_name', 'uid']].value_counts() \
+            .reset_index(level=[1, 2]).rename(
+                columns={0: 'cited'})
+        jfm = jf.join(citations, how='outer', lsuffix='_jane', rsuffix='_refs')
+        jfm.insert(0, 'uid', jfm.uid_refs.where(jfm.uid_jane.isnull(), jfm.uid_jane))
+        jfm['cited'] = jfm['cited'].fillna(0).astype(int)
+    else:
+        jfm = jf.copy()
+        jfm['refs_name'] = None
+        jfm['cited'] = 0
 
     # Add metrics and main title
     jfm = _add_metrics_and_main_title(jfm)
@@ -170,8 +177,8 @@ def process_inputs(input_text=None, ris_path=None, refs_df=None, input_type=None
         processed DataFrames of journals, articles, and references.
     """
 
-    # Process user citations if refs_df not provided
-    if refs_df is None:
+    # Process ris_path user citations if refs_df not provided
+    if refs_df is None and ris_path is not None:
         refs_df = identify_user_references(ris_path)
 
     # Get matches and scores

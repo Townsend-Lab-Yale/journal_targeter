@@ -114,14 +114,17 @@ def search():
         title, abstract = form.title.data, form.abstract.data
         session['title'] = title
         session['abstract'] = abstract
-        ref_obj = form.ref_file.raw_data[0]  # type: werkzeug.FileStorage
-        fs = ref_obj.stream
-        fs.seek(0)
-        tempf = tempfile.TemporaryFile(mode='w+t', encoding='utf8')
-        tempf.writelines([i.decode('utf8') for i in fs.readlines()])
-        tempf.seek(0)
-
-        session['ris_name'] = ref_obj.filename
+        if form.ref_file.has_file():
+            ref_obj = form.ref_file.raw_data[0]  # type: werkzeug.FileStorage
+            fs = ref_obj.stream
+            fs.seek(0)
+            tempf = tempfile.TemporaryFile(mode='w+t', encoding='utf8')
+            tempf.writelines([i.decode('utf8') for i in fs.readlines()])
+            tempf.seek(0)
+            session['ris_name'] = ref_obj.filename
+        else:
+            tempf = None
+            session['ris_name'] = None
         # Send queries to Jane and build jf, af, refs_df
         try:
             jf, af, refs_df = run_queries(
@@ -134,8 +137,9 @@ def search():
             flash(msg)
             return render_template('upload.html', form=form)
         finally:
-            tempf.close()
-            fs.close()
+            if form.ref_file.has_file():
+                tempf.close()
+                fs.close()
         return redirect(url_for('.results'))
     # if 'title' in session:
     #     form.title.data = session['title']

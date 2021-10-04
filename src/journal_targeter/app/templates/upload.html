@@ -40,7 +40,7 @@
             <textarea class="form-control" id="abstract-field" name="abstract" required>{{ form.abstract.data }}</textarea>
         </div>
     </div>
-    <div class="form-group row required">
+    <div class="form-group row">
         <div class="col-lg-2">
             <label class="form-control-label" for="ref_file">References (RIS)</label>
             <span data-toggle="tooltip" data-placement="top"
@@ -55,7 +55,7 @@
             {% for error in form.ref_file.errors %}
             <div class="invalid-feedback" style="display: block; text-align: left">{{ error }}</div>
             {% endfor %}
-            <input class="form-control-file" id="ref_file" name="ref_file" required type="file">
+            <input class="form-control-file" id="ref_file" name="ref_file" type="file">
         </div>
     </div>
     <div class="form-group row">

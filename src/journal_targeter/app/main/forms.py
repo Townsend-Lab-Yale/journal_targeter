@@ -10,7 +10,6 @@ class UploadForm(FlaskForm):
     abstract = TextAreaField('Your abstract',  default='', validators=[
         DataRequired(), Length(max=10000, message="10000 character limit.")])
     ref_file = FileField('References RIS file', validators=[
-        FileRequired(),
         FileAllowed(['ris'], 'Use .ris extension')
     ])
     submit = SubmitField('Upload')
