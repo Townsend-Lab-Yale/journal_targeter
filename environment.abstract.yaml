@@ -38,6 +38,7 @@ dependencies:
   - flask-markdown
   - openpyxl
   - appdirs
+  - rich
   - Flask-SQLAlchemy
   - pyxlsb
   - pip:

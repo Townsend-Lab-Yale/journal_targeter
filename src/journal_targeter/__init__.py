@@ -20,18 +20,18 @@ import os
 import logging
 from typing import Union
 
+from rich.logging import RichHandler
+
 
 def _create_logger(log_level: Union[str, None] = None):
     if log_level is None:
         log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
     log_level_int = getattr(logging, log_level)
 
-    ch = logging.StreamHandler()
+    ch = RichHandler(rich_tracebacks=True, show_level=False, show_path=False,
+                     locals_max_string=120)
     ch.setLevel(log_level_int)
-    formatter = logging.Formatter(
-        fmt='%(asctime)s - %(message)s',
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    formatter = logging.Formatter(fmt='%(message)s', datefmt="%Y-%m-%d %H:%M:%S")
     ch.setFormatter(formatter)
 
     _logger = logging.getLogger(__name__)

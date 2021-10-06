@@ -560,7 +560,7 @@ def _download_pubmed_reference():
     with contextlib.closing(urllib_request.urlopen(medline_url)) as r:
         with open(paths.PM_MEDLINE_PATH, 'wb') as f:
             shutil.copyfileobj(r, f)
-    _logger.info(f"Updated pubmed reference file from NCBI FTP ({paths.PM_MEDLINE_PATH}).")
+    _logger.info(f"Updated pubmed reference file from NCBI FTP ('{paths.PM_MEDLINE_PATH}').")
 
 
 def _write_metadata_file(meta: pd.DataFrame):
