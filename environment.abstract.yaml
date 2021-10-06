@@ -39,6 +39,7 @@ dependencies:
   - openpyxl
   - appdirs
   - Flask-SQLAlchemy
+  - pyxlsb
   - pip:
       - iso4
       - RISparser

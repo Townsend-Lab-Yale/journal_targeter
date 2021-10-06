@@ -225,14 +225,13 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
     if scopus_path:
         from journal_targeter import scopus
         from journal_targeter.models import RefTable, TableMatcher
-        scopsm = scopus.load_scopus_journals_reduced(scopus_path)  # 31 s
-        scop = RefTable(df=scopsm, source_name='scopus', index_is_uid=True,
-                        rename_dict={'citescore': 'CiteScore'},
-                        title_col='journal_name', issn_print='Print-ISSN',
-                        issn_online='E-ISSN', col_metrics=['CiteScore'],
-                        col_other=['is_open'])
-        tm_scop = TableMatcher(scop)
-        tm_scop.match_missing(n_processes=ncpus, save=True)
+        scopsm = scopus.load_scopus_titles_metrics(scopus_path)  # 31 s
+        scop_ref = RefTable(source_name='scopus', df=scopsm, title_col='Title',
+                            col_metrics=['CiteScore', 'SNIP', 'SJR'],
+                            issn_print='issn_print', issn_online='issn_online',
+                            index_is_uid=True)
+        scop_tm = TableMatcher(scop_ref)
+        scop_tm.match_missing(n_processes=ncpus, save=True)
         with app.app_context():
             Source.updated_now('scopus')
     if jcr_path:

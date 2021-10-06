@@ -2,13 +2,13 @@
 
 Data via https://www.scopus.com/sources ('source titles only', sign in required).
 """
-import os
 import re
 import time
 import logging
 
 import numpy as np
 import pandas as pd
+import pyxlsb
 
 from .helpers import get_issn_safe, get_issn_comb, get_clean_lowercase
 
@@ -20,6 +20,27 @@ _logger = logging.getLogger(__name__)
 
 class ColumnException(Exception):
     pass
+
+
+def load_scopus_titles_metrics(xlsb_path):
+    """Processes xlsb `Source titles and metrics` data."""
+    if not xlsb_path.endswith('.xlsb'):
+        ValueError("Scopus file should end with xlsb extension.")
+    # 10.3s to load. 59k lines
+    wb = pyxlsb.open_workbook(xlsb_path)
+    use_sheet = [i for i in wb.sheets if i.startswith('CiteScore')][0]
+    df = pd.read_excel(xlsb_path, sheet_name=use_sheet, engine='pyxlsb')
+    df.drop_duplicates(subset='Scopus Source ID', keep='first', ignore_index=True, inplace=True)  # ~17ms
+    # ~0.1s to transform data
+    df['issn_print'] = df['Print ISSN'].map(_get_single_issn)
+    df['issn_online'] = df['E-ISSN'].map(_get_single_issn)
+    citescore_col = [i for i in df.columns if i.startswith('CiteScore')][0]
+    _logger.info(f"Using column '{citescore_col}' as CiteScore.")
+    df.rename(columns={'Scopus Source ID': 'scopus_id',
+                       citescore_col: 'CiteScore',
+                       }, inplace=True)
+    df.set_index('scopus_id', inplace=True)
+    return df
 
 
 def load_scopus_journals_full(scopus_xlsx_path=None):
@@ -106,6 +127,20 @@ def load_scopus_journals_reduced(scopus_xlsx_path=None):
     dfs['is_open'] = dfs['open_access_status'].fillna('').str.lower().str.contains('doaj')
     dfs.set_index('scopus_id', inplace=True)
     return dfs
+
+
+def _get_single_issn(val):
+    """Parses space-separated, truncated ISSNs from titles and metrics workbook."""
+    val_str = str(val).strip()
+    if pd.isnull(val):
+        return np.nan
+    if ' ' in val_str:
+        single = val_str.split(' ')[0]
+    else:
+        single = val_str
+    good_chars = ''.join([i for i in single if i.isnumeric() or i in {'X', 'x'}])
+    assert single == good_chars, f"Bad characters present in {val_str}"
+    return single.zfill(8)
 
 
 def _identify_column(substring_lower, columns):
