@@ -147,6 +147,11 @@ def build_bokeh_sources(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
                         pref_weight=_DEFAULT_WEIGHT):
     """Return source_j, source_a, source_c."""
     jfs = jf.copy()
+    # Populate any missing metrics (in case results are older than last metric refresh)
+    if any(map(lambda v: v not in jfs.columns, MT.metric_list)):
+        metric_table = MT.df[MT.metric_list]
+        for metric_name in MT.metric_list:
+            jfs[metric_name] = jfs['uid'].map(metric_table[metric_name])
     for metric in MT.metric_list:
         # Replace nans with -1 as workaround for bokeh nan sorting
         jfs[metric] = jfs[metric].fillna(-1)
