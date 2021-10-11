@@ -1,18 +1,15 @@
 import os
 import shutil
 import logging
-import datetime
 from pathlib import Path
 from importlib import resources
-from collections import defaultdict
 
 import nltk
-import yaml
 from flask import Flask
 
 from . import paths
-from .app import db
-from .app.models import Source
+from .app import db, source_tracker
+from .app.models import Source, REFS_PKG
 
 
 _logger = logging.getLogger(__name__)
@@ -26,9 +23,7 @@ _REF_FILES = [
         ('demo', 'example.yaml', 'na'),
         ('romeo', 'sherpa_romeo_map.tsv.gz', 'romeo'),
         ('doaj', 'doaj.tsv.gz', 'doaj'),
-        ('', 'updates.yaml', 'na'),
     ]
-REFS_PKG = 'journal_targeter.refs'
 
 
 def refresh_data(app: Flask = None, rebuild_scopus=False):
@@ -46,48 +41,20 @@ def copy_initial_data(app):
     os.makedirs(paths.PUBMED_DIR, exist_ok=True)
     with app.app_context():
         db.create_all()
-    dates_repo = _get_source_dates_repo()
-    dates_user = _get_source_dates_user(app)
-    repo_newer = defaultdict(lambda: True)
-    for source in dates_repo:
-        if source in dates_user and dates_user[source] >= dates_repo[source]:
-            repo_newer[source] = False
-    repo_newer['na'] = False
-
     added_data = []
     for dir_name, file_name, source in _REF_FILES:
         new_path = Path(paths.DATA_ROOT).joinpath(dir_name, file_name)
-        if repo_newer[source] or not new_path.exists():
+        if source_tracker.is_repo_newer_or_not_in_local_db(source) \
+                or not new_path.exists():
             resource_dir = f'{REFS_PKG}.{dir_name}' if dir_name else REFS_PKG
             with resources.path(resource_dir, file_name) as path:
                 shutil.copy2(path, new_path)
             added_data.append(file_name)
-            # SET NEW DATE IN DB (if in valid source)
-            if source not in dates_repo:
-                continue
+            # SET NEW DATE IN DB
             with app.app_context():
-                Source.store_update(source_name=source,
-                                    update_time=dates_repo[source])
+                Source.updated_at(source_name=source,
+                                  update_time=source_tracker.dates_repo[source])
     if added_data:
+        source_tracker.refresh_dates_user(app)
         _logger.info(f"Copied reference data to {paths.DATA_ROOT}: {added_data}.")
     nltk.download('wordnet', download_dir=paths.NLTK_DIR, quiet=True)
-
-
-def _get_source_dates_repo():
-    with resources.path(REFS_PKG, 'updates.yaml') as path:
-        with open(path, 'r') as infile:
-            dates_repo = yaml.load(infile, yaml.SafeLoader)
-
-    for source, date_str in dates_repo.items():
-        dt = datetime.datetime.strptime(date_str, '%Y-%m-%d')
-        dates_repo[source] = dt
-    return dates_repo
-
-
-def _get_source_dates_user(app):
-    with app.app_context():
-        recs = Source.query.all()
-    dates_user = dict()
-    for r in recs:
-        dates_user[r.source_name] = r.update_time
-    return dates_user

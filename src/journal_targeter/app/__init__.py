@@ -11,6 +11,9 @@ bootstrap = Bootstrap()
 session = Session()
 db = SQLAlchemy(session_options={'expire_on_commit': False})
 
+from .models import SourceTracker  # delayed import as requires db
+source_tracker = SourceTracker()
+
 
 def create_app(config_name):
     app = Flask(__name__)
@@ -21,6 +24,7 @@ def create_app(config_name):
     session.init_app(app)
     Markdown(app)
     db.init_app(app)
+    source_tracker.init_app(app)
 
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
@@ -31,4 +35,3 @@ def create_app(config_name):
         init_demo(app.config['DEMO_PREFIX'], overwrite=False)
 
     return app
-
