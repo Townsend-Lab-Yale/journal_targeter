@@ -93,6 +93,10 @@ class RefTable:
         _logger.info(f"{len(df)} rows loaded into {self.source_name} table.")
         if not self.index_is_uid and df.index.name is None:
             df.index.set_names(f'{self.source_name}_ix')
+        # Ensure string-type index if index_is_uid
+        if self.index_is_uid and type(df.index[0]) != str:
+            df = df.copy()
+            df.index = df.index.astype(str)
         return df
 
     @property
