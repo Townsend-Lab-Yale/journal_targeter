@@ -13,7 +13,6 @@ from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
-import pprint
 import yaml
 
 
@@ -137,7 +136,7 @@ def get_queries_from_yaml(yaml_input):
             query_dict = yaml.load(infile, yaml.SafeLoader)
     else:
         query_dict = yaml.load(yaml_input, yaml.SafeLoader)
-    _logger.info(f"Inputs:\n{pprint.pformat(query_dict, sort_dicts=False)}.")
+    _logger.info(f"Inputs:\n{query_dict}.")
     assert not {'title', 'abstract'}.difference(set(query_dict.keys())), \
         "Keys must be title, abstract"
     return query_dict
