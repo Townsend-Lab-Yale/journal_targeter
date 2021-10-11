@@ -1,0 +1,39 @@
+<div class="list-group">
+
+{% for source, source_display, desc in
+        [
+        ('pubmed', 'Pubmed', 'The PubMed journal list provides the canonical set of journals used by the
+        app, with a unique identifier in the NLM Catalog (NLM ID). ISSNs,
+        abbreviations and alternative titles are obtained using NCBI Entrez lookups,
+        and used to link journal data from other sources.'),
+        ('doaj', 'DOAJ',
+        'The list of open access journals from the Directory of Open Access Journals,
+        with metadata including article processing charges, average time to publication,
+        and preservation databases.'),
+        ('romeo', 'Sherpa Romeo',
+        'Identifiers from the Sherpa Romeo database, linking to information on
+        open access pathways, including for non-open-access journals.'),
+        ('scopus', 'Scopus',
+        'Impact metrics from the Elsevier Scopus database, including CiteScore,
+        SNIP and SJR.'),
+        ('jcr', 'JCR',
+        'Additional impact metrics.'),
+        ]
+        %}
+
+  <li class="list-group-item">
+    <div class="d-flex w-100 justify-content-between">
+      <div class="mb-1 mr-2 font-weight-bold">{{ source_display }}</div>
+      <div class="mb-1 text-right small">
+          <span class="text-muted">updated</span>
+          <span class="text-success font-weight-bold">
+              {{ moment(source_dates[source].date()).format('MMM DD, YYYY') }}
+          </span>
+      </div>
+    </div>
+    <p class="small mb-1">{{ desc }}</p>
+  </li>
+
+{% endfor %}
+
+</div>

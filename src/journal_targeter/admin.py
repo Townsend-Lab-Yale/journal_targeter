@@ -18,9 +18,9 @@ _REF_FILES = [
         ('metrics', 'scopus_meta.tsv.gz', 'scopus'),
         ('metrics', 'scopus_map.tsv.gz', 'scopus'),
         ('pubmed', 'meta.tsv.gz', 'pubmed'),
-        ('demo', 'sars.ris', 'na'),
-        ('demo', 'sars.yaml', 'na'),
-        ('demo', 'example.yaml', 'na'),
+        ('demo', 'sars.ris', 'app'),
+        ('demo', 'sars.yaml', 'app'),
+        ('demo', 'example.yaml', 'app'),
         ('romeo', 'sherpa_romeo_map.tsv.gz', 'romeo'),
         ('doaj', 'doaj.tsv.gz', 'doaj'),
     ]

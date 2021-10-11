@@ -5,13 +5,14 @@ from flask import Blueprint
 main = Blueprint('main', __name__)
 
 from . import views, errors
-from .. import models
+from .. import models, source_tracker
 
 
 @main.app_context_processor
 def utility_processor():
     bokeh_version = _get_bokeh_version()
     return dict(bokeh_version=bokeh_version,
+                source_dates=source_tracker.dates_user,
                 get_static_text=_get_static_text)
 
 

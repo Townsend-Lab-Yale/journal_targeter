@@ -50,3 +50,4 @@ dependencies:
       - Flask-Session
       - pytest-check
       - flask-migrate
+      - Flask-Moment
