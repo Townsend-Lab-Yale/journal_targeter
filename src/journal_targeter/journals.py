@@ -20,7 +20,7 @@ from flask_migrate import Migrate
 from . import paths
 from .app import create_app, db
 from .app.models import Source
-from .admin import copy_initial_data
+from .admin import copy_initial_data, backup_and_clear_pm_metadata
 from .reference import init_reference_data_from_cache
 
 _APP_LOCATION = 'journal_targeter.journals:app'
@@ -195,22 +195,26 @@ def flask():
 
 @cli.command()
 @click.option('--update-nlm/--skip-nlm', default=True, show_default=True,
-              help="Refresh pubmed data")
+              help="Refresh NLM journal list.")
+@click.option('--wipe-metadata/--append-metadata', default=False, show_default=True,
+              help="Refresh all NLM metadata.")
 @click.option("-s", "--scopus_path", type=click.Path(exists=True),
               help="Scopus 'ext_list' XLSX file.")
 @click.option("-j", "--jcr_path", type=click.Path(exists=True),
               help="JCR JSON file")
 @click.option("-n", "--ncpus", type=int, default=1, show_default=True,
               help="Number of processes for parallel matching.")
-def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
+def update_sources(update_nlm, wipe_metadata, scopus_path, jcr_path, ncpus):
     """Update data sources, inc NLM, Scopus and JCR."""
     if update_nlm:
         from . import pubmed
         api_key = app.config['API_KEY']
         _logger.info('API key present.') if api_key else _logger.info('API key absent.')
-        medline_updated = pubmed.download_and_compare_pubmed_reference()
+        medline_unchanged = pubmed.download_and_compare_pubmed_reference()
+        if wipe_metadata:
+            backup_and_clear_pm_metadata()
         tm_pickle_exists = os.path.exists(paths.TM_PICKLE_PATH)
-        if medline_updated or not tm_pickle_exists:
+        if not medline_unchanged or not tm_pickle_exists:
             with app.app_context():
                 pm_full = pubmed.load_pubmed_journals(api_key=api_key)
             tm = pubmed.TitleMatcher().init_data(pm_full)  # type: pubmed.TitleMatcher
@@ -247,6 +251,7 @@ def update_sources(update_nlm, scopus_path, jcr_path, ncpus):
         jcr_tm.match_missing(n_processes=ncpus, save=True)
         with app.app_context():
             Source.updated_now('jcr')
+    _logger.info("Source update complete.")
 
 
 @cli.command(context_settings=dict(ignore_unknown_options=True,))

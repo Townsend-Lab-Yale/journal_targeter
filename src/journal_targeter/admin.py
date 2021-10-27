@@ -58,3 +58,10 @@ def copy_initial_data(app):
         source_tracker.refresh_dates_user(app)
         _logger.info(f"Copied reference data to {paths.DATA_ROOT}: {added_data}.")
     nltk.download('wordnet', download_dir=paths.NLTK_DIR, quiet=True)
+
+
+def backup_and_clear_pm_metadata():
+    for path in [paths.PM_META_PATH, paths.TM_PICKLE_PATH]:
+        if os.path.exists(path):
+            backup_path = path + '.prev'
+            shutil.move(path, backup_path)
