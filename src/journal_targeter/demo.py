@@ -61,8 +61,62 @@ def update_demo_plot(file_prefix, use_jane_tables=True):
     return pickle_path
 
 
-def create_demo_data(title=None, abstract=None, ris_name=None,
-                     file_prefix=None, save_yaml=True):
+def create_demo_data_from_yaml(yaml_path, ris_path, prefix=None, save_yaml=True):
+    """Use yaml file with title + abstract, ris_path to create demo example."""
+    demo_dict = helpers.get_queries_from_yaml(yaml_path)
+    if not os.path.exists(ris_path):
+        raise FileNotFoundError('Invalid query YAML path.')
+    ris_name = os.path.basename(ris_path)
+    demo_dict.update({'ris_name': ris_name})
+    dest_ris_path = os.path.join(DEMO_DIR, ris_name)
+    if os.path.exists(dest_ris_path):
+        _logger.info("Using existing ris file in demo directory.")
+    else:
+        shutil.copy2(ris_path, dest_ris_path)
+        _logger.info("Copied ris path to demo directory.")
+    if prefix is None:
+        yaml_basename = os.path.basename(yaml_path)
+        prefix = os.path.splitext(yaml_basename)[0]
+    _logger.info(f"Using prefix '{prefix}'.")
+    _create_demo_data(file_prefix=prefix, save_yaml=save_yaml, **demo_dict)
+
+
+def create_demo_data_from_args(title=None, abstract=None, ris_path=None,
+                               prefix=None, save_yaml=True, overwrite_ris=False):
+    """Create demo data from title + abstract, ris_path."""
+    if not os.path.exists(ris_path):
+        raise FileNotFoundError('Invalid query YAML path.')
+    if None in {title, abstract, prefix}:
+        raise ValueError('Title, abstract and prefix are required.')
+    demo_dict = {'title': title, 'abstract': abstract}
+    if ris_path is not None:
+        ris_name = os.path.basename(ris_path)
+        demo_dict.update({'ris_name': ris_name})
+        dest_ris_path = os.path.join(DEMO_DIR, ris_name)
+        if os.path.exists(dest_ris_path) and not overwrite_ris:
+            _logger.info("Using existing ris file in demo directory.")
+        else:
+            shutil.copy2(ris_path, dest_ris_path)
+            _logger.info("Copied ris path to demo directory.")
+    else:
+        _logger.info("Skipping citation as no RIS file supplied.")
+    _logger.info(f"Using prefix '{prefix}'.")
+    _create_demo_data(file_prefix=prefix, save_yaml=save_yaml, **demo_dict)
+
+
+def init_demo(prefix, overwrite=True):
+    """Create demo pickle file from inputs YAML and RIS file in demo dir."""
+    yaml_path = os.path.join(DEMO_DIR, f'{prefix}.yaml')
+    ris_path = os.path.join(DEMO_DIR, f'{prefix}.ris')
+    output_path = os.path.join(DEMO_DIR, f'{prefix}.pickle')
+    if not overwrite and os.path.exists(output_path) and \
+            helpers.pickle_seems_ok(output_path):
+        return
+    create_demo_data_from_yaml(yaml_path, ris_path, prefix=prefix, save_yaml=False)
+
+
+def _create_demo_data(title=None, abstract=None, ris_name=None,
+                      file_prefix=None, save_yaml=True):
     """Create inputs YAML file and data pickle for query.
 
     Args:
@@ -82,37 +136,6 @@ def create_demo_data(title=None, abstract=None, ris_name=None,
         _save_inputs_yaml(title=title, abstract=abstract, ris_name=ris_name,
                           yaml_filename=yaml_filename)
     _build_demo_pickle(yaml_filename)
-
-
-def create_demo_data_from_yaml(yaml_path, ris_path, prefix=None, save_yaml=True):
-    """Use yaml file with title + abstract, ris_path to create demo example."""
-    demo_dict = helpers.get_queries_from_yaml(yaml_path)
-    if not os.path.exists(ris_path):
-        raise FileNotFoundError('Invalid query YAML path.')
-    ris_name = os.path.basename(ris_path)
-    demo_dict.update({'ris_name': ris_name})
-    dest_ris_path = os.path.join(DEMO_DIR, ris_name)
-    if os.path.exists(dest_ris_path):
-        _logger.info("Using existing ris file in demo directory.")
-    else:
-        shutil.copy2(ris_path, dest_ris_path)
-        _logger.info("Copied ris path to demo directory.")
-    if prefix is None:
-        yaml_basename = os.path.basename(yaml_path)
-        prefix = os.path.splitext(yaml_basename)[0]
-    _logger.info(f"Using prefix '{prefix}'.")
-    create_demo_data(file_prefix=prefix, save_yaml=save_yaml, **demo_dict)
-
-
-def init_demo(prefix, overwrite=True):
-    """Create demo pickle file from inputs YAML and RIS file in demo dir."""
-    yaml_path = os.path.join(DEMO_DIR, f'{prefix}.yaml')
-    ris_path = os.path.join(DEMO_DIR, f'{prefix}.ris')
-    output_path = os.path.join(DEMO_DIR, f'{prefix}.pickle')
-    if not overwrite and os.path.exists(output_path) and \
-            helpers.pickle_seems_ok(output_path):
-        return
-    create_demo_data_from_yaml(yaml_path, ris_path, prefix=prefix, save_yaml=False)
 
 
 def _build_demo_pickle(yaml_filename):
