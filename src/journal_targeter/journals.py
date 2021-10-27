@@ -66,7 +66,7 @@ def cli(ctx: click.core.Context, verbose):
 
 @cli.group()
 def setup():
-    """Set up environment variables."""
+    """Set up environment variables for running server."""
 
 
 @setup.command('prompt')
