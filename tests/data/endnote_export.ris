@@ -1,0 +1,35 @@
+﻿TY  - JOUR
+AB  - © 2018 Oxford University Press. All Rights Reserved. A major goal of cancer biology is determination of the relative importance of the genetic alterations that confer selective advantage to cancer cells. Tumor sequence surveys have frequently ranked the importance of substitutions to cancer growth by P value or a false-discovery conversion thereof. However, P values are thresholds for belief, not metrics of effect. Their frequent misuse as metrics of effect has often been vociferously decried, even in cases when the only attributable mistake was omission of effect sizes. Here, we propose an appropriate ranking-the cancer effect size, which is the selection intensity for somatic variants in cancer cell lineages. The selection intensity is a metric of the survival and reproductive advantage conferred by mutations in somatic tissue. Thus, they are of fundamental importance to oncology, and have immediate relevance to ongoing decision making in precision medicine tumor boards, to the selection and design of clinical trials, to the targeted development of pharmaceuticals, and to basic research prioritization. Within this commentary, we first discuss the scope of current methods that rank confidence in the overrepresentation of specific mutated genes in cancer genomes. Then we bring to bear recent advances that draw upon an understanding of the development of cancer as an evolutionary process to estimate the effect size of somatic variants leading to cancer. We demonstrate the estimation of the effect sizes of all recurrent single nucleotide variants in 22 cancer types, quantifying relative importance within and between driver genes.
+AU  - Cannataro, V. L.
+AU  - Gaffney, S. G.
+AU  - Townsend, J. P.
+DO  - 10.1093/jnci/djy168
+IS  - 11
+PY  - 2018
+ST  - Effect sizes of somatic mutations in cancer
+T2  - Journal of the National Cancer Institute
+TI  - Effect sizes of somatic mutations in cancer
+VL  - 110
+ID  - 1
+ER  - 
+
+TY  - JOUR
+AU  - Grossman, Robert L.
+AU  - Heath, Allison P.
+AU  - Ferretti, Vincent
+AU  - Varmus, Harold E.
+AU  - Lowy, Douglas R.
+AU  - Kibbe, Warren A.
+AU  - Staudt, Louis M.
+DO  - 10.1056/NEJMp1607591
+IS  - 12
+PY  - 2016
+SP  - 1109-1112
+ST  - Toward a Shared Vision for Cancer Genomic Data
+T2  - New England Journal of Medicine
+TI  - Toward a Shared Vision for Cancer Genomic Data
+UR  - https://www.nejm.org/doi/full/10.1056/NEJMp1607591
+VL  - 375
+ID  - 8
+ER  - 
+
