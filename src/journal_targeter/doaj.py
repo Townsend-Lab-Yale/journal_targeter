@@ -33,7 +33,7 @@ def match_and_trim_doaj_csv(path_csv: str, n_processes: Optional[int]) -> pd.Dat
         ('DOAJ Seal', 'doaj_seal'),  # Yes
     ])
 
-    doaj = df.loc[df.uid.notnull(), ['nlmid'] + list(keep_dict.keys())].rename(columns=keep_dict)
+    doaj = df.loc[df.nlmid.notnull(), ['nlmid'] + list(keep_dict.keys())].rename(columns=keep_dict)
     doaj.set_index('nlmid', inplace=True)
     out_path = os.path.join(DOAJ_DIR, 'doaj.tsv.gz')
     doaj.to_csv(out_path, sep='\t', index=True, compression='gzip',
