@@ -40,6 +40,9 @@ from collections import defaultdict
 from typing import Iterable, Union
 from collections import OrderedDict
 from urllib import request as urllib_request
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
 
 import iso4
 import numpy as np
@@ -56,6 +59,18 @@ from .app.models import Source
 URL_ESUMMARY = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi'
 URL_ESEARCH = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi'
 _logger = logging.getLogger(__name__)
+
+
+_retry_strategy = Retry(
+    total=3,
+    status_forcelist=[413, 429, 500, 502, 503, 504],
+    method_whitelist=["HEAD", "GET", "OPTIONS", "POST"],
+    backoff_factor=1,
+)
+_adapter = HTTPAdapter(max_retries=_retry_strategy)
+http = requests.Session()
+http.mount("https://", _adapter)
+http.mount("http://", _adapter)
 
 
 class HTTPError414(Exception):
@@ -679,7 +694,8 @@ def _fill_uids(df, api_key=None):  # , save_map=True
         #     _logger.debug("Updating NLMID > UID dictionary.")
         #     _save_uid_dict_to_file(uid_dict)
         for nlmid in nlmids_unknown:
-            df.loc[df.nlmid == nlmid, 'uid'] = new_uid_dict[nlmid]
+            if nlmid in new_uid_dict:
+                df.loc[df.nlmid == nlmid, 'uid'] = new_uid_dict[nlmid]
 
 
 def _get_uids_from_numeric_nlmids(nlmid_series: pd.Series) -> pd.Series:
@@ -742,7 +758,7 @@ def _get_meta_records_from_ids(uids_batch, api_key=None):
     if not api_key:
         _logger.info("API_KEY env variable not present. Attempting Entrez "
                      "request without key.")
-    res = requests.post(URL_ESUMMARY,
+    res = http.post(URL_ESUMMARY,
                         params=dict(db='nlmcatalog', id=ids, retmode='json',
                                     **api_kw))
     # test for res.status_code == 414. failure at 4154
@@ -795,53 +811,45 @@ def _request_uids_from_nlmids(nlmids, api_key=None):
         dictionary of NLM ID: NLM UID
     """
     uid_dict = dict()
+    failed_nlmids = []
     for ind, nlmid in enumerate(nlmids):
         uid = _request_uid_for_single_nlmid(nlmid, api_key=api_key)
         if uid is not None:
             uid_dict[nlmid] = uid
+        else:
+            failed_nlmids.append(nlmid)
         if not ind % 100:
             _logger.info(f"Download progress: finished UID lookup for index {ind}.")
+    if failed_nlmids:
+        failed_path = os.path.join(paths.PUBMED_DIR, 'failed_nlmids.txt')
+        with open(failed_path, 'w') as out:
+            out.write('\n'.join(failed_nlmids))
     return uid_dict
 
 
 def _request_uid_for_single_nlmid(nlmid: str,
                                   api_key: Union[str, None] = None) -> Union[str, None]:
     """Use eSearch API to get NCBI Entrez UID from NLM ID."""
-    res = requests.get(URL_ESEARCH,
-                       params=dict(db='nlmcatalog', id=nlmid,
-                                   term=nlmid, field='nlmid',
-                                   api_key=api_key))
+    from requests.packages.urllib3.util.retry import Retry
+
+    res = http.get(URL_ESEARCH, params=dict(
+        db='nlmcatalog', term=nlmid, field='nlmid', api_key=api_key))
     out = xmltodict.parse(res.content)['eSearchResult']
+    if 'ERROR' in out:
+        _logger.error(f'Failed lookup for {nlmid=} result: {out}. Status={res.status_code}')
+        time.sleep(2)  # TRY ONCE MORE
+        res = http.get(URL_ESEARCH, params=dict(
+            db='nlmcatalog', term=nlmid, field='nlmid', api_key=api_key))
+        out = xmltodict.parse(res.content)['eSearchResult']
+        if 'ERROR' in out:
+            _logger.error(f'Failed 2nd lookup for {nlmid=} result: {out}. Status={res.status_code}')
     if out['Count'] != '1':
-        _logger.error(f'Non single result for {nlmid}')
+        _logger.error(f'Non-single result for {nlmid}.')
         return None
-    else:
+    try:
         uid = out['IdList']['Id']
-        return uid
-
-
-def _unused_get_failed_lookup_ids(script_path, problem_output_paths):
-    lines = []
-    with open(script_path, 'r') as infile:
-        for line in infile:
-            for path in problem_output_paths:
-                if path in line:
-                    lines.append(line)
-    problem_ids = []
-    for line in lines:
-        ids = line.split('-id ')[1].split(' > ')[0].split(',')
-        problem_ids.extend(_unused_test_nlmids_for_lookup_failure(ids))
-    return problem_ids
-
-
-def _unused_test_nlmids_for_lookup_failure(ids):
-    problem_ids = []
-    for nlmid in ids:
-        res = requests.get(URL_ESUMMARY, params=dict(db='nlmcatalog', id=nlmid))
-        if 'ERROR' in res.content.decode('utf8'):
-            _logger.info(f"Problem ID: {nlmid}.")
-            problem_ids.append(nlmid)
-        time.sleep(0.1)
-    if not problem_ids:
-        _logger.info("IDs looked up successfully.")
-    return problem_ids
+    except (KeyError, TypeError):
+        _logger.error(f'Unexpected NLM ID lookup for {nlmid=} result: {out}. '
+                      f'Status: {res.status_code}')
+        return None
+    return uid
