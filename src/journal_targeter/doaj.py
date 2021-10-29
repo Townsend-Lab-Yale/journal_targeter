@@ -15,6 +15,7 @@ def match_and_trim_doaj_csv(path_csv: str, n_processes: Optional[int]) -> pd.Dat
     if not n_processes:
         n_processes = os.environ.get('N_PROCESSES', 1)
     df = pd.read_csv(path_csv, low_memory=False)
+    _logger.info("Loaded DOAJ data. Start title/ISSN matching.")
     match = TM.lookup_uids_from_title_issn(df['Journal title'],
                                            df['Journal ISSN (print version)'],
                                            df['Journal EISSN (online version)'],
