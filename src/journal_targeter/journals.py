@@ -38,18 +38,6 @@ def init_data(init_refs=False, init_demo=False):
         init_demo(app.config['DEMO_PREFIX'], overwrite=False)
 
 
-@app.cli.command('match')
-@click.option('-y', '--yaml', 'query_yaml',
-              required=True, type=click.Path(exists=True),
-              help='Path to YAML file with title and abstract fields.')
-@click.option('-r', '--ris', 'ris_path', type=click.Path(exists=True),
-              help='Path to references file in RIS format.')
-@click.option('-o', '--out_basename', default='out')
-def flask_match(**kwargs):
-    """Run search and save html file."""
-    return match_data(**kwargs)
-
-
 @click.group()
 @click.option('--verbose/--quiet', default=False)
 @click.pass_context
@@ -155,7 +143,7 @@ def config_edit():
 
 @cli.command()
 def build_demo():
-    """Create pubmed pickle object if needed; rebuild demo data."""
+    """(Re)build demo data."""
     from .demo import init_demo
     with app.app_context():
         demo_prefix = app.config['DEMO_PREFIX']
@@ -170,7 +158,7 @@ def build_demo():
               help='Path to references file in RIS format.')
 @click.option('-o', '--out_basename')
 def match(query_yaml=None, ris_path=None, out_basename=None):
-    """Run search and save html file."""
+    """Run search and save results as html file."""
     if query_yaml is None:
         example_path = os.path.join(paths.DATA_ROOT, 'demo', 'example.yaml')
         import pathlib
@@ -215,7 +203,7 @@ def flask():
               help="Number of processes for parallel matching.")
 def update_sources(update_nlm, clear_metadata, doaj_path, romeo, scopus_path,
                    clear_scopus_map, jcr_path, ncpus):
-    """Update data sources, inc NLM, Scopus and JCR."""
+    """Update data sources, inc NLM, DOAJ, Sherpa Romeo, etc."""
     if update_nlm:
         from . import pubmed
         api_key = app.config['API_KEY']
@@ -355,13 +343,13 @@ def make_shell_context():
     return dict(MT=MT, TM=TM)
 
 
-@app.cli.command()
-@click.option("-y", "--yaml_path", help="YAML path with title and abstract.")
-@click.option("-r", "--ris_path", help="RIS path with references.")
-@click.option("--prefix", help="Name prefix for demo data, e.g. lung.")
-def demo(yaml_path=None, ris_path=None, prefix=None):
-    from .demo import create_demo_data_from_yaml
-    create_demo_data_from_yaml(yaml_path, ris_path, prefix=prefix)
+# @app.cli.command()
+# @click.option("-y", "--yaml_path", help="YAML path with title and abstract.")
+# @click.option("-r", "--ris_path", help="RIS path with references.")
+# @click.option("--prefix", help="Name prefix for demo data, e.g. lung.")
+# def demo(yaml_path=None, ris_path=None, prefix=None):
+#     from .demo import create_demo_data_from_yaml
+#     create_demo_data_from_yaml(yaml_path, ris_path, prefix=prefix)
 
 
 def _store_new_env(env_dict) -> Union[None, os.PathLike]:
