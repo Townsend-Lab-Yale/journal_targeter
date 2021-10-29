@@ -39,8 +39,6 @@ def copy_initial_data(app):
     os.makedirs(paths.DATA_ROOT, exist_ok=True)
     os.makedirs(paths.METRICS_DIR, exist_ok=True)
     os.makedirs(paths.PUBMED_DIR, exist_ok=True)
-    with app.app_context():
-        db.create_all()
     added_data = []
     for dir_name, file_name, source in _REF_FILES:
         new_path = Path(paths.DATA_ROOT).joinpath(dir_name, file_name)

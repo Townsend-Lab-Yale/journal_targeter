@@ -27,6 +27,8 @@ def create_app(config_name):
     Markdown(app)
     db.init_app(app)
     moment.init_app(app)
+    with app.app_context():
+        db.create_all()  # required by source_tracker
     source_tracker.init_app(app)
 
     from .main import main as main_blueprint
