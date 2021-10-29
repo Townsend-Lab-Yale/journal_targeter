@@ -60,8 +60,27 @@ def copy_initial_data(app):
     nltk.download('wordnet', download_dir=paths.NLTK_DIR, quiet=True)
 
 
-def backup_and_clear_pm_metadata():
-    for path in [paths.PM_META_PATH, paths.TM_PICKLE_PATH]:
+def retire_and_backup_source(source_name, clear_map=True):
+    """Move source data to new file with .prev suffix, optionally keeping ID map."""
+    clear_paths = []
+    keep_paths = []
+    if source_name == 'pubmed':
+        clear_paths.extend([paths.PM_META_PATH, paths.TM_PICKLE_PATH])
+    elif source_name == 'doaj':
+        clear_paths.append(paths.DOAJ_PATH)
+    elif source_name == 'romeo':
+        clear_paths.append(paths.ROMEO_MAP_PATH)
+    else:  # handle metric sources
+        map_path = os.path.join(paths.METRICS_DIR, f"{source_name}_map.tsv.gz")
+        meta_path = os.path.join(paths.METRICS_DIR, f"{source_name}_meta.tsv.gz")
+        clear_paths.append(meta_path)
+        if clear_map:
+            clear_paths.append(map_path)
+        else:
+            keep_paths.append(map_path)
+    for path in clear_paths:
         if os.path.exists(path):
-            backup_path = path + '.prev'
-            shutil.move(path, backup_path)
+            shutil.move(path, path + '.prev')
+    for path in keep_paths:
+        if os.path.exists(path):
+            shutil.copy2(path, path + '.prev')

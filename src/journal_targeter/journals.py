@@ -17,17 +17,16 @@ from flask import render_template
 from flask.cli import FlaskGroup
 from flask_migrate import Migrate
 
-from . import paths
+from . import paths, admin
 from .app import create_app, db
 from .app.models import Source
-from .admin import copy_initial_data, backup_and_clear_pm_metadata
 from .reference import init_reference_data_from_cache
 
 _APP_LOCATION = 'journal_targeter.journals:app'
 _logger = logging.getLogger(__name__)
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 migrate = Migrate(app, db)
-copy_initial_data(app)
+admin.copy_initial_data(app)
 
 
 def init_data(init_refs=False, init_demo=False):
@@ -200,37 +199,50 @@ def flask():
 @cli.command()
 @click.option('--update-nlm/--skip-nlm', default=True, show_default=True,
               help="Refresh NLM journal list.")
-@click.option('--wipe-metadata/--append-metadata', default=False, show_default=True,
-              help="Refresh all NLM metadata.")
-@click.option("-s", "--scopus_path", type=click.Path(exists=True),
+@click.option('--clear-metadata/--append-metadata', default=False, show_default=True,
+              help="Clear previous NLM metadata.")
+@click.option("-d", "--doaj-path", type=click.Path(exists=True),
+              help="DOAJ data dump CSV path.")
+@click.option("-r/ ", "--romeo/--no-romeo", type=bool, default=False,
+              help="Rebuild Sherpa Romeo data.")
+@click.option("-s", "--scopus-path", type=click.Path(exists=True),
               help="Scopus 'ext_list' XLSX file.")
-@click.option("-j", "--jcr_path", type=click.Path(exists=True),
+@click.option('--clear-scopus-map/--append-scopus-map', default=False, show_default=True,
+              help="Clear previous Scopus to NLM ID map.")
+@click.option("-j", "--jcr-path", type=click.Path(exists=True),
               help="JCR JSON file")
 @click.option("-n", "--ncpus", type=int, default=1, show_default=True,
               help="Number of processes for parallel matching.")
-def update_sources(update_nlm, wipe_metadata, scopus_path, jcr_path, ncpus):
+def update_sources(update_nlm, clear_metadata, doaj_path, romeo, scopus_path,
+                   clear_scopus_map, jcr_path, ncpus):
     """Update data sources, inc NLM, Scopus and JCR."""
     if update_nlm:
         from . import pubmed
         api_key = app.config['API_KEY']
-        _logger.info('API key present.') if api_key else _logger.info('API key absent.')
+        _logger.info('NCBI API key found.') if api_key else _logger.info('NCBI API key not provided.')
         medline_unchanged = pubmed.download_and_compare_pubmed_reference()
-        if wipe_metadata:
-            backup_and_clear_pm_metadata()
+        if clear_metadata:
+            admin.retire_and_backup_source('pubmed')
         tm_pickle_exists = os.path.exists(paths.TM_PICKLE_PATH)
         if not medline_unchanged or not tm_pickle_exists:
             with app.app_context():
                 pm_full = pubmed.load_pubmed_journals(api_key=api_key)
             tm = pubmed.TitleMatcher().init_data(pm_full)  # type: pubmed.TitleMatcher
             tm.save_pickle()
+            with app.app_context():
+                Source.updated_now('pubmed')
         else:
             _logger.info("No changes found in Medline journals list.")
-    if scopus_path or jcr_path:
+    if scopus_path or jcr_path or doaj_path or romeo:
         # initialize TitleMatcher data
         from .reference import TM
         with app.app_context():
             TM.init_data()
     if scopus_path:
+        if clear_scopus_map:
+            admin.retire_and_backup_source('scopus', clear_map=True)
+        else:
+            admin.retire_and_backup_source('scopus', clear_map=False)
         from journal_targeter import scopus
         from journal_targeter.models import RefTable, TableMatcher
         scopsm = scopus.load_scopus_titles_metrics(scopus_path)  # 31 s
@@ -243,6 +255,7 @@ def update_sources(update_nlm, wipe_metadata, scopus_path, jcr_path, ncpus):
         with app.app_context():
             Source.updated_now('scopus')
     if jcr_path:
+        admin.retire_and_backup_source('jcr')
         from journal_targeter.helpers import load_jcr_json
         from journal_targeter.models import RefTable, TableMatcher
         jif = load_jcr_json(jcr_path)
@@ -255,6 +268,25 @@ def update_sources(update_nlm, wipe_metadata, scopus_path, jcr_path, ncpus):
         jcr_tm.match_missing(n_processes=ncpus, save=True)
         with app.app_context():
             Source.updated_now('jcr')
+    if doaj_path:
+        admin.retire_and_backup_source('doaj')
+        from journal_targeter.doaj import match_and_trim_doaj_csv
+        match_and_trim_doaj_csv(doaj_path, n_processes=ncpus)
+        with app.app_context():
+            Source.updated_now('doaj')
+    if romeo:
+        admin.retire_and_backup_source('romeo')
+        if 'ROMEO_KEY' not in os.environ:
+            api_key = click.prompt('Sherpa Romeo API Key')
+        else:
+            api_key = os.environ.get('ROMEO_KEY')
+        from . import sherpa_romeo as romeo
+        romeo.delete_old_sherpa_data()
+        romeo.download_sherpa_data(api_key)
+        sr = romeo.match_sherpa_titles_issns(paths.ROMEO_TMP, n_processes=ncpus)
+        _ = romeo.save_sherpa_id_map(sr)
+        with app.app_context():
+            Source.updated_now('romeo')
     _logger.info("Source update complete.")
 
 
