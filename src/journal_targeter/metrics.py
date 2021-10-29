@@ -1,7 +1,6 @@
 import os
 import glob
 import logging
-from collections import OrderedDict
 
 import pandas as pd
 

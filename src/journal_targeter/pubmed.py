@@ -52,7 +52,6 @@ from flask import current_app
 from . import paths
 from .helpers import get_issn_safe, get_issn_comb, get_clean_lowercase, grouper, \
     coerce_to_valid_issn_or_nan, get_md5, pickle_seems_ok
-from .app import db
 from .app.models import Source
 
 

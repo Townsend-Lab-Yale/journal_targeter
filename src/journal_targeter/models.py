@@ -1,7 +1,7 @@
 import os
 import glob
 import logging
-from datetime import datetime, date
+from datetime import datetime
 from typing import Union, List
 
 import pandas as pd

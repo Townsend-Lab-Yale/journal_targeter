@@ -357,7 +357,3 @@ def _app_requires_data_init():
 
 if _app_requires_data_init():
     init_data(init_refs=True, init_demo=True)
-
-
-if __name__ == '__main__':
-    cli(['build-demo'])

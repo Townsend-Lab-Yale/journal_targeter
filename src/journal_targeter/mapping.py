@@ -1,18 +1,14 @@
 """Data consolidation."""
 import re
-import time
 import logging
 from functools import partial
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 
-import numpy as np
 import pandas as pd
 
-from . import metrics
 from .ref_loading import identify_user_references
 from .lookup import lookup_jane
 from .reference import MT, TM
-from .helpers import get_issn_comb
 
 _logger = logging.getLogger(__name__)
 
