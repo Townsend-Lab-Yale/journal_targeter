@@ -167,7 +167,9 @@ def match(query_yaml=None, ris_path=None, out_basename=None):
         if not query_yaml:
             click.secho("No YAML data provided.")
     if ris_path is None:
-        ris_path = click.prompt('RIS path', type=click.Path(exists=True))
+        use_ris = click.confirm("Do you have a references (RIS) file?", default=True)
+        if use_ris:
+            ris_path = click.prompt('RIS path', type=click.Path(exists=True), default="")
     if out_basename is None:
         out_basename = click.prompt('Output basename, e.g. <basename>.html',
                                     default='output')
@@ -320,10 +322,11 @@ def match_data(query_yaml=None, ris_path=None, out_basename=None):
                                   query_abstract=query_abstract,
                                   ris_path=ris_path)
     js, divs = get_bokeh_components(jf, af, refs_df)
-    ris_name = os.path.basename(ris_path)
+    ris_name = os.path.basename(ris_path) if ris_path else None
+    skip_refs = False if ris_path else True
     with app.app_context():
         html = render_template('index.html',
-                               standalone=True,
+                               standalone=True, skip_refs=skip_refs,
                                query_title=query_title,
                                query_abstract=query_abstract,
                                query_ris=ris_name,
