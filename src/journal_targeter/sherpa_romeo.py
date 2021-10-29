@@ -25,7 +25,7 @@ def download_sherpa_data(api_key: Optional[str], delete_old: bool = False) -> No
     - Takes approx 35min to download one at a time. Could be parallelized if
       number of journals is known in advance.
     """
-    api_key = os.environ.get('ROMEO_KEY') if not api_key else None
+    api_key = os.environ.get('ROMEO_KEY') if not api_key else api_key
     if not api_key:
         raise MissingKeyException("Supply api_key argument or set ROMEO_KEY "
                                   "environment variable")
