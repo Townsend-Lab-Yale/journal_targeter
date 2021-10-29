@@ -21,6 +21,9 @@ SESSION_DIR = os.path.join(DATA_ROOT, 'sessions')
 PM_MEDLINE_PATH = os.path.join(DATA_ROOT, 'pubmed', 'J_Medline.txt')
 PM_META_PATH = os.path.join(DATA_ROOT, 'pubmed', 'meta.tsv.gz')
 TM_PICKLE_PATH = os.path.join(DATA_ROOT, 'pubmed', 'tm.pickle.gz')
+# other support paths
+DOAJ_PATH = os.path.join(DOAJ_DIR, 'doaj.tsv.gz')
+ROMEO_MAP_PATH = os.path.join(ROMEO_DIR, 'sherpa_romeo_map.tsv.gz')
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(DEMO_DIR, exist_ok=True)

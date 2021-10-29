@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from .paths import DOAJ_DIR
+from .paths import DOAJ_PATH
 
 _logger = logging.getLogger(__name__)
 
@@ -35,15 +35,14 @@ def match_and_trim_doaj_csv(path_csv: str, n_processes: Optional[int]) -> pd.Dat
 
     doaj = df.loc[df.nlmid.notnull(), ['nlmid'] + list(keep_dict.keys())].rename(columns=keep_dict)
     doaj.set_index('nlmid', inplace=True)
-    out_path = os.path.join(DOAJ_DIR, 'doaj.tsv.gz')
-    doaj.to_csv(out_path, sep='\t', index=True, compression='gzip',
+    doaj.to_csv(DOAJ_PATH, sep='\t', index=True, compression='gzip',
                 encoding='utf8', line_terminator='\n')
     return doaj
 
 
 def load_doaj_table():
-    d = pd.read_csv(os.path.join(DOAJ_DIR, 'doaj.tsv.gz'), sep='\t',
-                    compression='gzip', lineterminator='\n', encoding='utf8')
+    d = pd.read_csv(DOAJ_PATH, sep='\t', compression='gzip',
+                    lineterminator='\n', encoding='utf8')
     d = d.set_index('nlmid').drop(columns=['title'])
     d['doaj_score'] = _get_doaj_score(d)
     return d

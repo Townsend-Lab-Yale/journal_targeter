@@ -99,7 +99,7 @@ def save_sherpa_id_map(sr: pd.DataFrame) -> pd.DataFrame:
         Table with columns: sr_id, nlmid.
     """
     sr_map = sr.dropna(subset=['nlmid']).reset_index()[['sr_id', 'nlmid']]
-    out_path = os.path.join(paths.ROMEO_DIR, 'sherpa_romeo_map.tsv.gz')
+    out_path = paths.ROMEO_MAP_PATH
     sr_map.to_csv(out_path, sep='\t', compression='gzip',
                   index=False)
     _logger.info(f"Saved Sherpa Romeo ID mapping data to {out_path}.")
@@ -112,7 +112,7 @@ def load_sherpa_id_map() -> pd.DataFrame:
     Returns:
         Table with columns: sr_id, nlmid.
     """
-    map_path = os.path.join(paths.ROMEO_DIR, 'sherpa_romeo_map.tsv.gz')
+    map_path = paths.ROMEO_MAP_PATH
     sr_map = pd.read_csv(map_path, sep='\t', compression='gzip', dtype=str)
     sr_map = sr_map.set_index('nlmid')['sr_id']
     return sr_map
