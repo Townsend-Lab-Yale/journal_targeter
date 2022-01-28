@@ -44,7 +44,7 @@ dependencies:
   - pip:
       - iso4
       - RISparser
-      - bootstrap-flask
+      - bootstrap-flask>=2.0.1
       - dominate
       - visitor
       - Flask-Session

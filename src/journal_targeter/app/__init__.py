@@ -1,5 +1,5 @@
 from flask import Flask
-from flask_bootstrap import Bootstrap
+from flask_bootstrap import Bootstrap4
 from flask_session import Session
 from flaskext.markdown import Markdown
 from flask_sqlalchemy import SQLAlchemy
@@ -8,7 +8,7 @@ from flask_moment import Moment
 from .config import config
 
 
-bootstrap = Bootstrap()
+bootstrap = Bootstrap4()
 session = Session()
 db = SQLAlchemy(session_options={'expire_on_commit': False})
 moment = Moment()
