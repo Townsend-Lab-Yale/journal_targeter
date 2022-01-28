@@ -19,6 +19,7 @@ To try it out, you have two options:
    - [Command-line interface \(CLI\)](#command-line-interface-cli)
       - [Quick start](#quick-start)
       - [Available commands](#available-commands)
+- [Modifying the code](#modifying-the-code)
 
 <!-- /MarkdownTOC -->
 
@@ -148,7 +149,7 @@ journal_targeter update-sources --ncpus 5 --skip-nlm --romeo
 journal_targeter update-sources --ncpus 5 --scopus-path "CiteScore 2011-2020 new methodology - May 2021.xlsb"
 ```
 
-### Modifying the code
+## Modifying the code
 
 This code comes with a [GPLv3 license](https://www.gnu.org/licenses/gpl-3.0.en.html), so feel free to tinker and share under 
 the license terms.
