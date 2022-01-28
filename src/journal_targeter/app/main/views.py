@@ -57,6 +57,9 @@ def demo(demo_prefix=None):
     if force_update:
         update_demo_plot(demo_prefix)
     data = get_demo_data_with_prefix(demo_prefix)
+    if data is None:
+        flash("Requested demo not found", "error")
+        return redirect(url_for('.index'))
     return render_template('index.html', title='Demo',
                            query_title=data['title'],
                            query_abstract=data['abstract'],
