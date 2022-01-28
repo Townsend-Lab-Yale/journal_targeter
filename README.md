@@ -147,3 +147,13 @@ journal_targeter update-sources --ncpus 5 --skip-nlm --romeo
 # via https://www.scopus.com/sources 
 journal_targeter update-sources --ncpus 5 --scopus-path "CiteScore 2011-2020 new methodology - May 2021.xlsb"
 ```
+
+### Modifying the code
+
+This code comes with a [GPLv3 license](https://www.gnu.org/licenses/gpl-3.0.en.html), so feel free to tinker and share under 
+the license terms.
+
+To enable the interactive debugger, set the FLASK_ENV variable to 'development':
+```shell
+FLASK_ENV=development journal_targeter flask run
+```
