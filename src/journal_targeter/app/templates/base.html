@@ -66,14 +66,14 @@
 
 {% block content %}
 
-{% block jumbo %}{% endblock %}
-
 {% for message in get_flashed_messages() %}
 <div class="alert alert-warning">
     <button type="button" class="close" data-dismiss="alert">&times;</button>
     {{ message }}
 </div>
 {% endfor %}
+
+{% block jumbo %}{% endblock %}
 
 {% block page_content %}{% endblock %}
 
