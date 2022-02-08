@@ -152,7 +152,7 @@ def concat_json_data_records_as_single_file(glob_str, out_path):
     n_records = len(data)
     with open(out_path, 'w') as out:
         json.dump({'data': data}, out, ensure_ascii=False)
-    _logger.info(f"{n_records} records written to {out_path}")
+    _logger.info(f"{n_records} records written to '{out_path}'")
 
 
 def load_jcr_json(json_path, name_col='journalName',

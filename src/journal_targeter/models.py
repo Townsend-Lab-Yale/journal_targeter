@@ -212,15 +212,13 @@ class TableMatcher:
         """Save id_map to file."""
         self.id_map.to_csv(self.map_path, sep='\t', line_terminator='\n',
                            encoding='utf8', compression='gzip')
-        _logger.info("Mapping data for %s saved to %s.", self.source_name,
-                     self.map_path)
+        _logger.info(f"Mapping data for {self.source_name} saved to '{self.map_path}'.")
 
     def _save_meta(self) -> None:
         """Save metrics/metadata to file, indexed by NLM UID."""
         self.meta_matched.to_csv(self.meta_path, sep='\t', line_terminator='\n',
                                  encoding='utf8', compression='gzip')
-        _logger.info("Metrics data for %s saved to %s.", self.source_name,
-                     self.meta_path)
+        _logger.info(f"Metrics data for {self.source_name} saved to '{self.meta_path}'.")
 
     @property
     def map_path(self) -> Union[str, None]:

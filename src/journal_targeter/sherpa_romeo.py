@@ -102,7 +102,7 @@ def save_sherpa_id_map(sr: pd.DataFrame) -> pd.DataFrame:
     out_path = paths.ROMEO_MAP_PATH
     sr_map.to_csv(out_path, sep='\t', compression='gzip',
                   index=False)
-    _logger.info(f"Saved Sherpa Romeo ID mapping data to {out_path}.")
+    _logger.info(f"Saved Sherpa Romeo ID mapping data to '{out_path}'.")
     return sr_map
 
 

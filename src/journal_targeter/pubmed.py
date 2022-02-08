@@ -580,7 +580,7 @@ def _download_pubmed_reference():
 def _write_metadata_file(meta: pd.DataFrame):
     meta.to_csv(paths.PM_META_PATH, sep='\t', compression='gzip', index=True,
                 line_terminator='\n')
-    _logger.info("Pubmed metadata written to %s", paths.PM_META_PATH)
+    _logger.info("Pubmed metadata written to '%s'", paths.PM_META_PATH)
 
 
 def _load_metadata_file() -> Union[pd.DataFrame, None]:
