@@ -48,8 +48,13 @@ class ModelTracker:
 
 
 def get_bokeh_components(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
-                         pref_weight=_DEFAULT_WEIGHT, store_prefs=False):
-    """Returns bokeh_js, bokeh_divs."""
+                         pref_weight=_DEFAULT_WEIGHT, store_prefs=False,
+                         plots_only=False):
+    """Gather interactive plots.
+
+    Returns embeddable bokeh_js, bokeh_divs in typical in-app usage where
+    plots_only=False. Otherwise returns dictionary of plot objects.
+    """
     source_j, source_a, source_c = build_bokeh_sources(jf, af, refs_df,
                                                        pref_metric=pref_metric,
                                                        pref_weight=pref_weight)
@@ -77,9 +82,12 @@ def get_bokeh_components(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
     plots['table'] = plot_datatable(source_j, mt_obj=mt, pref_metric=pref_metric,
                                     skip_refs=skip_refs)
     plots['fit'] = plot_fit_scatter(source_j, filter_dict=filter_dict,
-                                    mt_obj=mt, pref_metric=pref_metric)
+                                    mt_obj=mt, pref_metric=pref_metric,
+                                    plots_only=plots_only)
     plots['prospect'] = plot_prospect_scatter(source_j, filter_dict=filter_dict,
                                               mt_obj=mt, pref_metric=pref_metric)
+    if plots_only:
+        return plots
     params = Params()
     params.metric, params.weight = pref_metric, pref_weight
     # Create preference widgets, link to params
@@ -232,10 +240,10 @@ def plot_prospect_scatter(source_j, show_plot=False, filter_dict=None,
 
 
 def plot_fit_scatter(source_j, show_plot=False, filter_dict=None, mt_obj=None,
-                     pref_metric=_DEFAULT_IMPACT):
-    """Scatter plot: CAT vs CiteScore."""
+                     pref_metric=_DEFAULT_IMPACT, plots_only=False,
+                     plot_width=400, plot_height=400):
+    """Scatter plot: CAT vs impact metric."""
     TOOLS = "pan,wheel_zoom,box_select,reset"
-    plot_width, plot_height = 400, 400
     label_dict = {i: i for i in MT.metric_list}
     label_dict.update({
         'CAT': 'CAT (Citations + Abstract hits + Title hits)',
@@ -265,6 +273,10 @@ def plot_fit_scatter(source_j, show_plot=False, filter_dict=None, mt_obj=None,
 
     if mt_obj is not None:
         mt_obj.metric_axes.extend([p1.yaxis, p2.yaxis])
+
+    if plots_only:
+        grid = bkl.gridplot([[p1, p2]], toolbar_location=None)
+        return grid
 
     # WIDGETS
     option_dict = {label_dict[i]: i for i in label_dict}
