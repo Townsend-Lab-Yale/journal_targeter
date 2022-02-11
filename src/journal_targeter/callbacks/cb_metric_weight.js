@@ -32,7 +32,7 @@ if (changed_metric){
 let prospects = [];
 for (let i = 0; i < impact_vals.length; i++) {
     let impact = impact_vals[i];
-    if (impact > 0){
+    if (impact >= 0){
         let cat = cat_vals[i];
         let p = cat / (weight * impact + cat);
         prospects.push(p);
