@@ -47,7 +47,7 @@ class ModelTracker:
         self.metric_col_inds = None
 
 
-def get_bokeh_components(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
+def get_bokeh_components(jf, af, refs_df, pref_metric=None,
                          pref_weight=_DEFAULT_WEIGHT, store_prefs=False,
                          plots_only=False):
     """Gather interactive plots.
@@ -55,6 +55,7 @@ def get_bokeh_components(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
     Returns embeddable bokeh_js, bokeh_divs in typical in-app usage where
     plots_only=False. Otherwise returns dictionary of plot objects.
     """
+    pref_metric = _DEFAULT_IMPACT if pref_metric is None else pref_metric
     source_j, source_a, source_c = build_bokeh_sources(jf, af, refs_df,
                                                        pref_metric=pref_metric,
                                                        pref_weight=pref_weight)

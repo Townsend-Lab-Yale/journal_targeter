@@ -33,7 +33,7 @@ def get_demo_data_with_prefix(file_prefix) -> Union[Dict, None]:
     return data
 
 
-def update_demo_plot(file_prefix, use_jane_tables=True):
+def update_demo_plot(file_prefix, use_jane_tables=True, pref_metric=None):
     """Update bokeh plot js and html for specified demo file.
 
     Plot components can become out of date. This function updates them.
@@ -51,7 +51,7 @@ def update_demo_plot(file_prefix, use_jane_tables=True):
                                 refs_df=refs_df)
         data.update({'jf': jf,
                      'af': af})
-    js, divs = get_bokeh_components(jf, af, refs_df)
+    js, divs = get_bokeh_components(jf, af, refs_df, pref_metric=pref_metric)
     data.update({'bokeh_js': js,
                  'bokeh_divs': divs
                  })
