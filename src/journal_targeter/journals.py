@@ -86,7 +86,7 @@ def config_prompt():
         _set_env_via_prompt('MAIL_USE_TLS', 'Use TLS', default=False)
         _set_env_via_prompt('MAIL_ADMIN', 'Alert address (e.g. admin@example.com)')
 
-    add_romeo_key = click.confirm("Store an NCBI API key?", default=False)
+    add_romeo_key = click.confirm("Store a Sherpa Romeo API key?", default=False)
     if add_romeo_key:
         _set_env_via_prompt('ROMEO_KEY', 'Sherpa Romeo API KEY')
 
