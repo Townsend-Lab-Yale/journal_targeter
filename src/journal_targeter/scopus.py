@@ -1,4 +1,4 @@
-""""Load Scopus journals table.
+"""Load Scopus journals table.
 
 Data via https://www.scopus.com/sources ('source titles only', sign in required).
 """

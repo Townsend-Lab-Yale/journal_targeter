@@ -1,4 +1,4 @@
-""""COLOR-BLIND PALETTE, via https://www.nature.com/articles/nmeth.1618."""
+"""COLOR-BLIND PALETTE, via https://www.nature.com/articles/nmeth.1618."""
 from matplotlib.colors import rgb2hex
 
 

@@ -1,24 +1,22 @@
-"""Manage Pubmed journals list and metadata, for use as master journal list.
+"""Manage Pubmed journals list and metadata, for use as a master journal list.
 
 PUBMED journal list at ftp://ftp.ncbi.nih.gov/pubmed/J_Medline.txt
     via https://www.nlm.nih.gov/bsd/serfile_addedinfo.html
 
-Example record:
+Example record::
 
-```
---------------------------------------------------------
-JrId: 1
-JournalTitle: AADE editors' journal
-MedAbbr: AADE Ed J
-ISSN (Print): 0160-6999
-ISSN (Online):
-IsoAbbr: AADE Ed J
-NlmId: 7708172
---------------------------------------------------------
-```
+    --------------------------------------------------------
+    JrId: 1
+    JournalTitle: AADE editors' journal
+    MedAbbr: AADE Ed J
+    ISSN (Print): 0160-6999
+    ISSN (Online):
+    IsoAbbr: AADE Ed J
+    NlmId: 7708172
+    --------------------------------------------------------
 
 There are two IDs provided per record. Strangely, neither of these is the UID
-used by entrez, which is in the journal page URL in the NLM catalog:
+used by entrez, which is in the journal page URL in the NLM catalog::
 
     https://www.ncbi.nlm.nih.gov/nlmcatalog/<UID>
 
@@ -234,7 +232,7 @@ class TitleMatcher:
         return match
 
     def get_uids_from_title(self, user_title):
-        """"Get UIDs corresponding to provided journal title.
+        """Get UIDs corresponding to provided journal title.
 
         Args:
             user_title (str): Journal name or abbreviation.
