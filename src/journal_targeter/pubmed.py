@@ -205,7 +205,7 @@ class TitleMatcher:
             titles (iterable): titles to match.
             n_processes (int): Processor count for mapping single title lookup.
         Returns:
-            match table (pd.DataFrame): inc input_title, uid,
+            match table (pd.DataFrame), with columns input_title, uid,
                 categ (type of match, e.g. safe abbreviation),
                 single_match (bool for exactly one match).
         """

@@ -42,8 +42,8 @@ def lookup_jane(text=None):
         text (str): Title or abstract text for Jane lookup.
 
     Returns:
-        journals (pd.DataFrame): table of journals, ordered by rank
-        articles (pd.DataFrame): table of articles, includes journal rank column.
+        journals DataFrame, ordered by rank; articles Dataframe, including
+                journal rank column.
     """
     if text is None:
         raise TypeError("Query text is required for Jane search.")
@@ -72,8 +72,8 @@ def fetch_jane_results_via_api(text=None):
             text (str): Title or abstract text for Jane lookup.
 
         Returns:
-            journals (pd.DataFrame): table of journals, ordered by rank
-            articles (pd.DataFrame): table of articles, includes journal rank column.
+            journals DataFrame, ordered by rank; articles Dataframe, including
+                journal rank column.
     """
     res = CLIENT.get_journal_results(query_text=text)
 
@@ -124,8 +124,8 @@ def fetch_jane_results_via_scrape(text=None):
             text (str): Title or abstract text for Jane lookup.
 
         Returns:
-            journals (pd.DataFrame): table of journals, ordered by rank
-            articles (pd.DataFrame): table of articles, includes journal rank column.
+            journals DataFrame, ordered by rank; articles Dataframe, including
+                journal rank column.
     """
     form_dict = {'text': text,
                  'languageCount': 7,

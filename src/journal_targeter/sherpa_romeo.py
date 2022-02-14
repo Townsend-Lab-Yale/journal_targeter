@@ -66,7 +66,7 @@ def match_sherpa_titles_issns(download_dir: str,
             N_PROCESSES in environment if exists, else 1.
 
     Returns:
-        Table of SR data with nlmids. Columns: title, issn_print, issn_online,
+        Table of SR data with nlmids. Columns are title, issn_print, issn_online,
             issn_other, issn_other1, issn_print_merge, nlmid.
     """
     if not n_processes:
@@ -96,7 +96,7 @@ def save_sherpa_id_map(sr: pd.DataFrame) -> pd.DataFrame:
         out_dir: Directory in which to save sherpa_romeo_map.tsv.gz
 
     Returns:
-        Table with columns: sr_id, nlmid.
+        Table with columns sr_id, nlmid.
     """
     sr_map = sr.dropna(subset=['nlmid']).reset_index()[['sr_id', 'nlmid']]
     out_path = paths.ROMEO_MAP_PATH
@@ -110,7 +110,7 @@ def load_sherpa_id_map() -> pd.DataFrame:
     """Save Sherpa Romeo ID -> NLM ID map as table.
 
     Returns:
-        Table with columns: sr_id, nlmid.
+        Table with columns sr_id, nlmid.
     """
     map_path = paths.ROMEO_MAP_PATH
     sr_map = pd.read_csv(map_path, sep='\t', compression='gzip', dtype=str)

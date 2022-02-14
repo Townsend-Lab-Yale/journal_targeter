@@ -97,13 +97,12 @@ def identify_user_references(ris_path):
         ris_path (str): RIS references file path.
 
     Returns:
-        refs_df table (pd.DataFrame). Includes columns for:
-            - journal matching info: uid, scopus_id, categ, single_match, user_journal
-            - article info: use_article_title, use_year, use_authors
-            - extra article info: may include some/all of type_of_reference,
-            primary_title, first_authors, publication_year, alternate_title3,
-            volume, number, start_page, end_page, doi, url, and others...
-        ...
+        refs_df table (pd.DataFrame). Includes columns for
+            - journal matching info (uid, scopus_id, categ, single_match, user_journal)
+            - article info (use_article_title, use_year, use_authors),
+            - extra article info (may include some/all of type_of_reference,
+              primary_title, first_authors, publication_year, alternate_title3,
+              volume, number, start_page, end_page, doi, url, and others...)
     """
     _logger.info(f"Loading references file.")
     df = _read_ris_file(ris_path)  # type: pd.DataFrame

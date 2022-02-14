@@ -22,7 +22,7 @@ def get_demo_data_with_prefix(file_prefix) -> Union[Dict, None]:
         file_prefix (str): Filename without extension, e.g. prefix.yaml.
 
     Returns:
-        dict with keys: title, abstract, ris_name, j, a, jf, af, refs_df,
+        Dictionary containing title, abstract, ris_name, j, a, jf, af, refs_df,
             bokeh_js, bokeh_divs.
     """
     pickle_path = os.path.join(DEMO_DIR, f'{file_prefix}.pickle')
