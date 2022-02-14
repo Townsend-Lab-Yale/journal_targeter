@@ -89,6 +89,7 @@ def coerce_to_valid_issn_or_nan(issn):
     '12345678'
     >>> coerce_to_valid_issn_or_nan('004-4586X')
     '0044586X'
+    >>> _logger.setLevel("ERROR")
     >>> coerce_to_valid_issn_or_nan('1234567Y')
     nan
     >>> coerce_to_valid_issn_or_nan('***-*****')
