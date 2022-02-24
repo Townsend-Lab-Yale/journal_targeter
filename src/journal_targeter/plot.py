@@ -188,6 +188,7 @@ def build_bokeh_sources(jf, af, refs_df, pref_metric=_DEFAULT_IMPACT,
     jfs['ax_match'] = jfs[_DEFAULT_MATCH]  # redundant column for suitability toggling
     jfs['prospect'] = jfs['CAT'] / (jfs['CAT'] + pref_weight * jfs['ax_impact'])
     jfs['prospect'] = jfs['prospect'].where(jfs['ax_impact'] >= 0, -1)
+    jfs['expect'] = jfs.eval('prospect * ax_impact').where(jfs['prospect'] >= 0, -1)
     jfs['label_metric'] = jfs[f"label_{pref_metric}"]
     jfs.rename(columns={i: i.title() for i in ['cited', 'title', 'abstract']},
                inplace=True)
@@ -379,6 +380,7 @@ def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None,
     col_param_dict.update(metric_dict)
     col_param_dict.update({
         'prospect': ('P', w_sm),
+        'expect': ('E', w_sm),
         # 'is_oa_str': ('OA', w_sm),
         'in_ml_str': ('ML', w_sm),
         'in_pmc_str': ('PMC', w_sm),
@@ -452,7 +454,8 @@ def plot_datatable(source_j, show_plot=False, table_kws=None, mt_obj=None,
                         ['sim_sum', 'sim_max']})
     format_dict.update({i: _get_formatter_mark_blank_round_dp(dp=1) for i in
                         list(metric_dict)})
-    format_dict.update({'prospect': _get_formatter_mark_blank_round_dp(dp=2)})
+    format_dict.update({i: _get_formatter_mark_blank_round_dp(dp=2) for i in
+                        ['prospect', 'expect']})
     table_cols = OrderedDict({
         col: dict(width=col_param_dict[col][1],
                   formatter=format_dict.get(col,

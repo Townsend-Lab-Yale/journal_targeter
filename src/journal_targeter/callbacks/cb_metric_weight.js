@@ -30,18 +30,23 @@ if (changed_metric){
 
 /* SET PROSPECT WHEN WEIGHT OR IMPACT CHANGES */
 let prospects = [];
+let expect = [];
 for (let i = 0; i < impact_vals.length; i++) {
     let impact = impact_vals[i];
     if (impact >= 0){
         let cat = cat_vals[i];
         let p = cat / (weight * impact + cat);
+        let pi = p * impact;
         prospects.push(p);
+        expect.push(pi);
     }
     else {
         prospects.push(-1);
+        expect.push(-1);
     }
 }
 new_data.prospect = prospects;
+new_data.expect = expect;
 
 /* UPDATE DATA SOURCE */
 source.data = new_data;
