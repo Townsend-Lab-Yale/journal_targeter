@@ -577,7 +577,7 @@ def plot_icats(source_j, source_a, source_c, show_plot=False, filter_dict=None,
     taptool_impact.callback = bkm.OpenURL(url=_URL_NLM_BK)
 
     # SORT SELECT WIDGET
-    select2 = bkm.widgets.Select(title='Sort by:', value='CAT', width=120,
+    select2 = bkm.widgets.Select(title='Sort by:', value='CAT', width=140,
                                  width_policy='fixed',
                                  options=list(factor_dict))
     select2.js_on_change('value', bkm.callbacks.CustomJS(
@@ -698,7 +698,9 @@ def _get_journal_factor_dict(jf, skip_refs=False):
         sort_dict[metric_name] = [metric_col_dict[metric_name], 'sim_sum']
     # sort_dict.update([
     sort_dict['Max similarity'] = ['sim_max', 'sim_sum']
-    sort_dict['Max similarity'] = ['sim_max', 'sim_sum']
+    sort_dict['Sum of similarities'] = ['sim_sum', 'sim_max']
+    sort_dict['Prospect'] = ['prospect']
+    sort_dict['Expected impact'] = ['expect']
     if not skip_refs:
         sort_dict['Cited'] = ['Cited', 'sim_sum']
     sort_dict['Abstract'] = ['Abstract', 'sim_sum']
