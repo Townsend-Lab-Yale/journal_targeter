@@ -2,18 +2,26 @@
 The Articles plot shows impact metrics, `C`itation counts (when a RIS file is provided),
     `A`bstract match counts, `T`itle match counts, and similarity scores.
 
-- Journals are ordered by the sum of `C`, `A`, and `T`, then by the sum of
-    similarity scores for articles returned across abstract and title
-    [Jane](https://jane.biosemantics.org/) searches.
 - Article similarity scores come from the Lucene search engine used by Jane.
-- The metric used for the Impact bar chart be changed via dropdown.
-    Missing values are indicated with gray bars. Hovel tooltips indicate impact
-    values and journal tags from Jane, including indexing status in Medline
+- Journals are initially ordered by the sum of `C`, `A`, and `T`, then by the sum
+    of similarity scores for articles returned across abstract and title
+    [Jane](https://jane.biosemantics.org/) searches.
+- Alternative sorting values are available via dropdown. These values include
+    impact metrics, similarity values, prospect (as defined
+    <a class="text-primary cite-explore-prospect" type="button">above</a>) and
+    'Expected impact' (the product of prospect and impact).
+- The impact metric used for the bar chart, and for calculations of prospect and
+    expected impact, can be changed via the 'Preferred impact metric' dropdown.
+- In the bar chart, missing values are indicated with gray bars. Hover tooltips
+    show various impact values and journal tags from Jane, including indexing status in Medline
     and PubMed Central, and open access status.
-- Hovering over Cited / Title / Abstract boxes and the Similarity scatter plot shows
-    the corresponding articles.
-- Markers in the Similarity scatter plot are colored green for articles found in
-    both abstract and title searches. Clicking a marker opens the article page
+- Hovering over <span style="background-color:#E69F00;padding: 0px 4px;">Cited</span> /
+    <span style="background-color:#56B4E9;padding: 0px 4px;">Abstract</span> /
+    <span style="background-color:#F0E442;padding: 0px 4px;">Title</span> boxes
+    and the Similarity scatter plot shows the corresponding articles.
+- Markers in the Similarity scatter plot are colored
+    <span style="color: #009E73">green</span> for articles found in both
+    abstract and title searches. Clicking a marker opens the article page
     in PubMed.
 
 {% endfilter %}
