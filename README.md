@@ -1,5 +1,7 @@
 # Jot: Journal Targeter
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6390622.svg)](https://doi.org/10.5281/zenodo.6390622)
+
 Jot is a web app that identifies potential target journals for a manuscript,
 based on the manuscript's title, abstract, and (optionally) references. Jot
 gathers a wealth of data on journal quality, impact, fit, and open access
