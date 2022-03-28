@@ -63,11 +63,11 @@ on your machine. You have a few options:
        - With conda/miniconda installed, you can easily create an environment 
          with the required dependencies using the provided `environment.yaml` file:
          ```shell
-         conda env create -n journals -f environment.abstract.yaml
+         conda env create -n jot -f environment.abstract.yaml
          ```
          Activate this environment (necessary each time you want to run Jot) with:
          ```shell
-         conda activate journals
+         conda activate jot
          ```
    3. To install dependencies (if you didn't use the conda step above), run:
       ```shell
