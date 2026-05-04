@@ -222,6 +222,20 @@
                   </div>
               </div>
 
+              <div class="card" style="border-left: 3px solid #6c757d;">
+                  <div class="card-header" id="tips-author-header" style="background-color: #f8f9fa;">
+                      <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#tips-author"
+                              aria-expanded="false" aria-controls="tips-author">
+                        <i class="fas fa-question-circle text-secondary mr-1"></i> Author's workflow tips
+                      </button>
+                  </div>
+                  <div id="tips-author" class="collapse" aria-labelledby="tips-author-header" data-parent="#sidebar-accordion">
+                    <div class="card-body">
+                        {% include "_info_tips.html" %}
+                    </div>
+                  </div>
+              </div>
+
               <div class="card">
                   <div class="card-header" id="sources-header">
                       <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#sources"
